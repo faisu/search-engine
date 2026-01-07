@@ -7,23 +7,40 @@ import fs from 'fs';
 // Make sure this file exists in your project:
 // public/fonts/NotoSansDevanagari-Regular.ttf
 const DEVANAGARI_FONT_FAMILY = 'NotoSansDevanagari';
-const devanagariFontPath = path.join(
-  process.cwd(),
-  'public',
-  'fonts',
-  'NotoSansDevanagari-Regular.ttf'
-);
+
+// Try multiple possible paths for the font file (Vercel serverless functions may have different paths)
+const getFontPath = (): string | null => {
+  const possiblePaths = [
+    path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
+    path.join(process.cwd(), '.next', 'static', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
+    path.join(process.cwd(), 'fonts', 'NotoSansDevanagari-Regular.ttf'),
+    path.join('/var/task', 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf'), // Vercel lambda path
+    path.join('/var/task', '.next', 'static', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
+  ];
+  
+  for (const fontPath of possiblePaths) {
+    if (fs.existsSync(fontPath)) {
+      console.log(`Font found at: ${fontPath}`);
+      return fontPath;
+    }
+  }
+  
+  console.warn('Font not found in any of these paths:', possiblePaths);
+  return null;
+};
+
+const devanagariFontPath = getFontPath();
 
 // Track if font registration was successful
 let devanagariFontRegistered = false;
 
-if (fs.existsSync(devanagariFontPath)) {
+if (devanagariFontPath) {
   try {
     GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
     // Verify registration was successful
     devanagariFontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
     if (devanagariFontRegistered) {
-      console.log('Devanagari font registered successfully');
+      console.log('Devanagari font registered successfully at module load');
     } else {
       console.warn('Font file exists but registration verification failed');
     }
@@ -36,45 +53,42 @@ if (fs.existsSync(devanagariFontPath)) {
   }
 } else {
   console.warn(
-    'Devanagari font file not found at:',
-    devanagariFontPath,
-    '- Marathi/Hindi text may not render correctly in generated images.'
+    'Devanagari font file not found - will try to register at runtime'
   );
   devanagariFontRegistered = false;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Ensure font is registered (in case module-level registration failed)
+    // Ensure font is registered (try to find and register at runtime)
     let fontRegistered = devanagariFontRegistered;
-    if (!fontRegistered && fs.existsSync(devanagariFontPath)) {
-      try {
-        GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
-        // Verify font was actually registered
-        fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-        if (fontRegistered) {
-          console.log('Devanagari font registered successfully in handler');
-        } else {
-          console.warn('Font registration did not succeed - font not found after registration');
+    
+    // Always verify font is available, and try to register if not
+    if (!GlobalFonts.has(DEVANAGARI_FONT_FAMILY)) {
+      // Try to find font file at runtime
+      const runtimeFontPath = getFontPath();
+      if (runtimeFontPath) {
+        try {
+          console.log(`Attempting to register font from: ${runtimeFontPath}`);
+          GlobalFonts.registerFromPath(runtimeFontPath, DEVANAGARI_FONT_FAMILY);
+          fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+          if (fontRegistered) {
+            console.log('✓ Devanagari font registered successfully at runtime');
+          } else {
+            console.error('✗ Font registration failed - font not available after registration');
+          }
+        } catch (err) {
+          console.error('Font registration error:', err);
+          fontRegistered = false;
         }
-      } catch (err) {
-        console.error('Font registration failed in handler:', err);
+      } else {
+        console.error('✗ Font file not found at runtime. Current working directory:', process.cwd());
+        console.error('✗ Font registration will fail - Marathi/Hindi text will show as boxes');
         fontRegistered = false;
       }
-    } else if (fontRegistered) {
-      // Double-check that font is still available
-      fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-      if (!fontRegistered) {
-        console.warn('Font was marked as registered but is not available, re-registering...');
-        if (fs.existsSync(devanagariFontPath)) {
-          try {
-            GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
-            fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-          } catch (err) {
-            console.error('Re-registration failed:', err);
-          }
-        }
-      }
+    } else {
+      fontRegistered = true;
+      console.log('✓ Font already registered and available');
     }
 
     const body = await request.json();
@@ -193,7 +207,11 @@ export async function POST(request: NextRequest) {
     
     // Log font being used for debugging
     if (isIndicLanguage && !fontRegistered) {
-      console.warn(`Devanagari font not registered! Font path: ${devanagariFontPath}, exists: ${fs.existsSync(devanagariFontPath)}`);
+      const currentFontPath = getFontPath();
+      console.warn(`Devanagari font not registered! Font path: ${currentFontPath || 'NOT FOUND'}`);
+      if (currentFontPath) {
+        console.warn(`Font file exists: ${fs.existsSync(currentFontPath)}`);
+      }
       try {
         const families = Array.from(GlobalFonts.families).slice(0, 10);
         console.warn(`Available fonts: ${families.join(', ')}`);
@@ -208,8 +226,13 @@ export async function POST(request: NextRequest) {
       const fontAvailable = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
       if (!fontAvailable) {
         console.error(`CRITICAL: Font ${DEVANAGARI_FONT_FAMILY} was marked as registered but is not available!`);
-        console.error(`Font file exists: ${fs.existsSync(devanagariFontPath)}`);
-        console.error(`Font path: ${devanagariFontPath}`);
+        const currentFontPath = getFontPath();
+        if (currentFontPath) {
+          console.error(`Font file exists: ${fs.existsSync(currentFontPath)}`);
+          console.error(`Font path: ${currentFontPath}`);
+        } else {
+          console.error('Font path not found');
+        }
       } else {
         console.log(`✓ Font ${DEVANAGARI_FONT_FAMILY} verified and available`);
       }
