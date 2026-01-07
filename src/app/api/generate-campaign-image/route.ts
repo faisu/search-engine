@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCanvas, loadImage, registerFont } from 'canvas';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import path from 'path';
 import fs from 'fs';
 
@@ -19,7 +19,7 @@ let devanagariFontRegistered = false;
 
 if (fs.existsSync(devanagariFontPath)) {
   try {
-    registerFont(devanagariFontPath, { family: DEVANAGARI_FONT_FAMILY });
+    GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
     devanagariFontRegistered = true;
     console.log('Devanagari font registered successfully');
   } catch (err) {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     let fontRegistered = devanagariFontRegistered;
     if (!fontRegistered && fs.existsSync(devanagariFontPath)) {
       try {
-        registerFont(devanagariFontPath, { family: DEVANAGARI_FONT_FAMILY });
+        GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
         fontRegistered = true;
       } catch (err) {
         console.error('Font registration failed in handler:', err);
@@ -398,7 +398,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.92 });
+    const buffer = canvas.toBuffer('image/jpeg', 0.92);
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
