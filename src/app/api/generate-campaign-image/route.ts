@@ -1,7 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
+
+// Register Devanagari-capable font for Marathi/Hindi text rendering.
+// Make sure this file exists in your project:
+// public/fonts/NotoSansDevanagari-Regular.ttf
+const DEVANAGARI_FONT_FAMILY = 'NotoSansDevanagari';
+const devanagariFontPath = path.join(
+  process.cwd(),
+  'public',
+  'fonts',
+  'NotoSansDevanagari-Regular.ttf'
+);
+
+if (fs.existsSync(devanagariFontPath)) {
+  try {
+    registerFont(devanagariFontPath, { family: DEVANAGARI_FONT_FAMILY });
+  } catch (err) {
+    console.warn(
+      'Failed to register Devanagari font for campaign image generation:',
+      err
+    );
+  }
+} else {
+  console.warn(
+    'Devanagari font file not found at:',
+    devanagariFontPath,
+    '- Marathi/Hindi text may not render correctly in generated images.'
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,13 +138,16 @@ export async function POST(request: NextRequest) {
     const addressRightPadding = 250; // Right padding for Polling Station Address field
     const y = [141, 144, 145, 147].includes(parseInt(ward)) ? 380 : 340;
 
+    const isIndicLanguage = language === '1' || language === '2';
+    const baseFontFamily = isIndicLanguage ? DEVANAGARI_FONT_FAMILY : 'Arial';
+
     let currentY = y;
     rows.forEach(({ label, value }) => {
       const isPollingStationAddress = 
         label === 'मतदान केंद्र पत्ता:' || 
         label === 'Polling Station Address:';
       
-      ctx.font = `${fontSize}px Arial, sans-serif`;
+      ctx.font = `${fontSize}px ${baseFontFamily}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const labelText = `${label} `;
@@ -147,7 +178,7 @@ export async function POST(request: NextRequest) {
       let currentYForLine = currentY;
       
       if (!hasSeparators) {
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         
@@ -180,7 +211,7 @@ export async function POST(request: NextRequest) {
         }
         
         ctx.save();
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         ctx.fillStyle = fontColor;
@@ -214,7 +245,7 @@ export async function POST(request: NextRequest) {
             const separator = segIdx > 0 ? ' | ' : '';
             const fullLabelText = `${separator}${embeddedLabel} `;
             
-            ctx.font = `${fontSize}px Arial, sans-serif`;
+            ctx.font = `${fontSize}px ${baseFontFamily}`;
             const labelMetrics = ctx.measureText(fullLabelText);
             
             if (currentX + labelMetrics.width > rightEdge && segIdx > 0) {
@@ -234,7 +265,7 @@ export async function POST(request: NextRequest) {
               currentX += labelMetrics.width;
             }
             
-            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
             const valueMetrics = ctx.measureText(embeddedValue);
             
             if (currentX + valueMetrics.width > rightEdge) {
@@ -252,7 +283,7 @@ export async function POST(request: NextRequest) {
             ctx.fillText(embeddedValue, currentX, currentYForLine);
             currentX += valueMetrics.width;
           } else {
-            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
             const separator = segIdx > 0 ? ' | ' : '';
             const words = segment.split(' ').filter(w => w.length > 0);
             let lineWords: string[] = [];
