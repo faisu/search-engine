@@ -6,6 +6,7 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
+    "start:railway": "npx next start",
     "lint": "next lint"
   },
   "dependencies": {
