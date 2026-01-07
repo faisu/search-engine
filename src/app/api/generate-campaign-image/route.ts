@@ -20,8 +20,13 @@ let devanagariFontRegistered = false;
 if (fs.existsSync(devanagariFontPath)) {
   try {
     GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
-    devanagariFontRegistered = true;
-    console.log('Devanagari font registered successfully');
+    // Verify registration was successful
+    devanagariFontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+    if (devanagariFontRegistered) {
+      console.log('Devanagari font registered successfully');
+    } else {
+      console.warn('Font file exists but registration verification failed');
+    }
   } catch (err) {
     console.warn(
       'Failed to register Devanagari font for campaign image generation:',
@@ -45,9 +50,30 @@ export async function POST(request: NextRequest) {
     if (!fontRegistered && fs.existsSync(devanagariFontPath)) {
       try {
         GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
-        fontRegistered = true;
+        // Verify font was actually registered
+        fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+        if (fontRegistered) {
+          console.log('Devanagari font registered successfully in handler');
+        } else {
+          console.warn('Font registration did not succeed - font not found after registration');
+        }
       } catch (err) {
         console.error('Font registration failed in handler:', err);
+        fontRegistered = false;
+      }
+    } else if (fontRegistered) {
+      // Double-check that font is still available
+      fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+      if (!fontRegistered) {
+        console.warn('Font was marked as registered but is not available, re-registering...');
+        if (fs.existsSync(devanagariFontPath)) {
+          try {
+            GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
+            fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+          } catch (err) {
+            console.error('Re-registration failed:', err);
+          }
+        }
       }
     }
 
