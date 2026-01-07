@@ -2,11 +2,11 @@
 nixPkgs = ["nodejs-18_x", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --production=false"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "./node_modules/.bin/next start -H 0.0.0.0"
+cmd = "node_modules/.bin/next start -H 0.0.0.0"
 
