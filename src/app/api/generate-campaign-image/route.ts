@@ -194,14 +194,41 @@ export async function POST(request: NextRequest) {
     // Log font being used for debugging
     if (isIndicLanguage && !fontRegistered) {
       console.warn(`Devanagari font not registered! Font path: ${devanagariFontPath}, exists: ${fs.existsSync(devanagariFontPath)}`);
+      try {
+        const families = Array.from(GlobalFonts.families).slice(0, 10);
+        console.warn(`Available fonts: ${families.join(', ')}`);
+      } catch (e) {
+        console.warn('Could not list available fonts');
+      }
     }
     console.log(`Using font: ${baseFontFamily} for language: ${language}, font registered: ${fontRegistered}`);
+    
+    // Final verification - check if font is actually available
+    if (isIndicLanguage && fontRegistered) {
+      const fontAvailable = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
+      if (!fontAvailable) {
+        console.error(`CRITICAL: Font ${DEVANAGARI_FONT_FAMILY} was marked as registered but is not available!`);
+        console.error(`Font file exists: ${fs.existsSync(devanagariFontPath)}`);
+        console.error(`Font path: ${devanagariFontPath}`);
+      } else {
+        console.log(`✓ Font ${DEVANAGARI_FONT_FAMILY} verified and available`);
+      }
+    }
     
     // Helper function to safely set font
     const setFont = (weight: string = '', size: number = fontSize, family: string = baseFontFamily) => {
       try {
+        // Verify font is available if using Devanagari font
+        if (family === DEVANAGARI_FONT_FAMILY && !GlobalFonts.has(DEVANAGARI_FONT_FAMILY)) {
+          console.warn(`Font ${DEVANAGARI_FONT_FAMILY} not available, falling back to Arial`);
+          family = 'Arial';
+        }
         const fontString = weight ? `${weight} ${size}px ${family}` : `${size}px ${family}`;
         ctx.font = fontString;
+        // Log font being set for debugging (only for first few calls to avoid spam)
+        if (Math.random() < 0.1) { // Log ~10% of calls
+          console.log(`Font set to: ${fontString}`);
+        }
       } catch (err) {
         console.error('Error setting font, using Arial fallback:', err);
         ctx.font = weight ? `${weight} ${size}px Arial` : `${size}px Arial`;
