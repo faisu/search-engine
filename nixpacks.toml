@@ -8,5 +8,5 @@ cmds = ["npm ci"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx next start"
+cmd = "./node_modules/.bin/next start"
 

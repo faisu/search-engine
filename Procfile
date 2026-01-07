@@ -1,2 +1,2 @@
-web: npx next start
+web: ./node_modules/.bin/next start
 
