@@ -1,2 +1,2 @@
-web: ./node_modules/.bin/next start
+web: node server.js
 

@@ -8,5 +8,5 @@ cmds = ["npm ci --production=false"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "node_modules/.bin/next start -H 0.0.0.0"
+cmd = "node server.js"
 
