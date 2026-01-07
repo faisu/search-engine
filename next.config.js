@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker deployments
+  output: 'standalone',
+  
   webpack: (config, { isServer, webpack }) => {
     if (isServer) {
       // Make @napi-rs/canvas external so it's not bundled
