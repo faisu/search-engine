@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for Docker deployments
-  output: 'standalone',
+  // Disable standalone for Railway - use regular next start
+  // output: 'standalone',
   
   webpack: (config, { isServer, webpack }) => {
     if (isServer) {
