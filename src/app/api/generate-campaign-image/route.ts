@@ -14,14 +14,20 @@ const devanagariFontPath = path.join(
   'NotoSansDevanagari-Regular.ttf'
 );
 
+// Track if font registration was successful
+let devanagariFontRegistered = false;
+
 if (fs.existsSync(devanagariFontPath)) {
   try {
     registerFont(devanagariFontPath, { family: DEVANAGARI_FONT_FAMILY });
+    devanagariFontRegistered = true;
+    console.log('Devanagari font registered successfully');
   } catch (err) {
     console.warn(
       'Failed to register Devanagari font for campaign image generation:',
       err
     );
+    devanagariFontRegistered = false;
   }
 } else {
   console.warn(
@@ -29,10 +35,22 @@ if (fs.existsSync(devanagariFontPath)) {
     devanagariFontPath,
     '- Marathi/Hindi text may not render correctly in generated images.'
   );
+  devanagariFontRegistered = false;
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Ensure font is registered (in case module-level registration failed)
+    let fontRegistered = devanagariFontRegistered;
+    if (!fontRegistered && fs.existsSync(devanagariFontPath)) {
+      try {
+        registerFont(devanagariFontPath, { family: DEVANAGARI_FONT_FAMILY });
+        fontRegistered = true;
+      } catch (err) {
+        console.error('Font registration failed in handler:', err);
+      }
+    }
+
     const body = await request.json();
     const {
       ward,
@@ -139,7 +157,30 @@ export async function POST(request: NextRequest) {
     const y = [141, 144, 145, 147].includes(parseInt(ward)) ? 380 : 340;
 
     const isIndicLanguage = language === '1' || language === '2';
-    const baseFontFamily = isIndicLanguage ? DEVANAGARI_FONT_FAMILY : 'Arial';
+    // Use registered Devanagari font if available
+    // For English, always use Arial
+    // Note: If Devanagari font isn't registered, we'll still try to use it
+    // as canvas might have a fallback, but text may render as boxes
+    const baseFontFamily = isIndicLanguage 
+      ? (fontRegistered ? DEVANAGARI_FONT_FAMILY : 'Arial')
+      : 'Arial';
+    
+    // Log font being used for debugging
+    if (isIndicLanguage && !fontRegistered) {
+      console.warn(`Devanagari font not registered! Font path: ${devanagariFontPath}, exists: ${fs.existsSync(devanagariFontPath)}`);
+    }
+    console.log(`Using font: ${baseFontFamily} for language: ${language}, font registered: ${fontRegistered}`);
+    
+    // Helper function to safely set font
+    const setFont = (weight: string = '', size: number = fontSize, family: string = baseFontFamily) => {
+      try {
+        const fontString = weight ? `${weight} ${size}px ${family}` : `${size}px ${family}`;
+        ctx.font = fontString;
+      } catch (err) {
+        console.error('Error setting font, using Arial fallback:', err);
+        ctx.font = weight ? `${weight} ${size}px Arial` : `${size}px Arial`;
+      }
+    };
 
     let currentY = y;
     rows.forEach(({ label, value }) => {
@@ -147,7 +188,8 @@ export async function POST(request: NextRequest) {
         label === 'मतदान केंद्र पत्ता:' || 
         label === 'Polling Station Address:';
       
-      ctx.font = `${fontSize}px ${baseFontFamily}`;
+      // Set font using helper
+      setFont();
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const labelText = `${label} `;
@@ -178,7 +220,7 @@ export async function POST(request: NextRequest) {
       let currentYForLine = currentY;
       
       if (!hasSeparators) {
-        ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
+        setFont('bold');
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         
@@ -211,7 +253,7 @@ export async function POST(request: NextRequest) {
         }
         
         ctx.save();
-        ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
+        setFont('bold');
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         ctx.fillStyle = fontColor;
@@ -245,7 +287,7 @@ export async function POST(request: NextRequest) {
             const separator = segIdx > 0 ? ' | ' : '';
             const fullLabelText = `${separator}${embeddedLabel} `;
             
-            ctx.font = `${fontSize}px ${baseFontFamily}`;
+            setFont();
             const labelMetrics = ctx.measureText(fullLabelText);
             
             if (currentX + labelMetrics.width > rightEdge && segIdx > 0) {
@@ -265,7 +307,7 @@ export async function POST(request: NextRequest) {
               currentX += labelMetrics.width;
             }
             
-            ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
+            setFont('bold');
             const valueMetrics = ctx.measureText(embeddedValue);
             
             if (currentX + valueMetrics.width > rightEdge) {
@@ -283,7 +325,7 @@ export async function POST(request: NextRequest) {
             ctx.fillText(embeddedValue, currentX, currentYForLine);
             currentX += valueMetrics.width;
           } else {
-            ctx.font = `bold ${fontSize}px ${baseFontFamily}`;
+            setFont('bold');
             const separator = segIdx > 0 ? ' | ' : '';
             const words = segment.split(' ').filter(w => w.length > 0);
             let lineWords: string[] = [];
