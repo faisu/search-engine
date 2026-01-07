@@ -2,16 +2,58 @@
 const nextConfig = {
   webpack: (config, { isServer, webpack }) => {
     if (isServer) {
-      // Ignore .node files completely - they're native bindings
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /\.node$/,
-        })
+      // Make @napi-rs/canvas external so it's not bundled
+      const originalExternals = config.externals;
+      config.externals = [
+        ...(Array.isArray(originalExternals) ? originalExternals : [originalExternals].filter(Boolean)),
+        function ({ request, context }, callback) {
+          // Externalize @napi-rs/canvas package
+          if (request === '@napi-rs/canvas') {
+            return callback(null, 'commonjs ' + request);
+          }
+          
+          // Externalize any .node files (native bindings)
+          if (/\.node$/.test(request)) {
+            return callback(null, 'commonjs ' + request);
+          }
+          
+          // Externalize native bindings from @napi-rs/canvas subpackages
+          if (request && (request.includes('@napi-rs/canvas') || request.includes('skia.') || request.includes('canvas-'))) {
+            return callback(null, 'commonjs ' + request);
+          }
+          
+          callback();
+        },
+      ];
+      
+      // Ignore .node files completely - must be added before other plugins
+      if (!config.plugins) {
+        config.plugins = [];
+      }
+      
+      // Remove any existing IgnorePlugin for .node files to avoid conflicts
+      config.plugins = config.plugins.filter(
+        (plugin) => !(plugin instanceof webpack.IgnorePlugin && plugin.options && plugin.options.resourceRegExp && /\.node$/.test(plugin.options.resourceRegExp.toString()))
       );
       
-      // Make @napi-rs/canvas external so it's not bundled
-      config.externals = config.externals || [];
-      config.externals.push('@napi-rs/canvas');
+      // Add our IgnorePlugin
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          checkResource(resource, context) {
+            // Ignore .node files
+            if (/\.node$/.test(resource)) {
+              return true;
+            }
+            // Ignore native bindings in @napi-rs/canvas
+            if (context && (context.includes('@napi-rs/canvas') || context.includes('canvas-'))) {
+              if (/skia|binding|\.node/.test(resource)) {
+                return true;
+              }
+            }
+            return false;
+          },
+        })
+      );
     }
     
     return config;
