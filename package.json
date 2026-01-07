@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
-    "start": "next start -H 0.0.0.0",
-    "start:railway": "next start -H 0.0.0.0",
+    "start": "./node_modules/.bin/next start -H 0.0.0.0",
+    "start:railway": "./node_modules/.bin/next start -H 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {
