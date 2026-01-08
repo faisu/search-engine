@@ -1,96 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
 
-// Register Devanagari-capable font for Marathi/Hindi text rendering.
-// Make sure this file exists in your project:
-// public/fonts/NotoSansDevanagari-Regular.ttf
-const DEVANAGARI_FONT_FAMILY = 'NotoSansDevanagari';
-
-// Try multiple possible paths for the font file (Vercel serverless functions may have different paths)
-const getFontPath = (): string | null => {
-  const possiblePaths = [
-    path.join(process.cwd(), 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
-    path.join(process.cwd(), '.next', 'static', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
-    path.join(process.cwd(), 'fonts', 'NotoSansDevanagari-Regular.ttf'),
-    path.join('/var/task', 'public', 'fonts', 'NotoSansDevanagari-Regular.ttf'), // Vercel lambda path
-    path.join('/var/task', '.next', 'static', 'fonts', 'NotoSansDevanagari-Regular.ttf'),
-  ];
-  
-  for (const fontPath of possiblePaths) {
-    if (fs.existsSync(fontPath)) {
-      console.log(`Font found at: ${fontPath}`);
-      return fontPath;
-    }
-  }
-  
-  console.warn('Font not found in any of these paths:', possiblePaths);
-  return null;
-};
-
-const devanagariFontPath = getFontPath();
-
-// Track if font registration was successful
-let devanagariFontRegistered = false;
-
-if (devanagariFontPath) {
-  try {
-    GlobalFonts.registerFromPath(devanagariFontPath, DEVANAGARI_FONT_FAMILY);
-    // Verify registration was successful
-    devanagariFontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-    if (devanagariFontRegistered) {
-      console.log('Devanagari font registered successfully at module load');
-    } else {
-      console.warn('Font file exists but registration verification failed');
-    }
-  } catch (err) {
-    console.warn(
-      'Failed to register Devanagari font for campaign image generation:',
-      err
-    );
-    devanagariFontRegistered = false;
-  }
-} else {
-  console.warn(
-    'Devanagari font file not found - will try to register at runtime'
-  );
-  devanagariFontRegistered = false;
-}
+// Mark as dynamic (this route generates images dynamically)
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Ensure font is registered (try to find and register at runtime)
-    let fontRegistered = devanagariFontRegistered;
-    
-    // Always verify font is available, and try to register if not
-    if (!GlobalFonts.has(DEVANAGARI_FONT_FAMILY)) {
-      // Try to find font file at runtime
-      const runtimeFontPath = getFontPath();
-      if (runtimeFontPath) {
-        try {
-          console.log(`Attempting to register font from: ${runtimeFontPath}`);
-          GlobalFonts.registerFromPath(runtimeFontPath, DEVANAGARI_FONT_FAMILY);
-          fontRegistered = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-          if (fontRegistered) {
-            console.log('✓ Devanagari font registered successfully at runtime');
-          } else {
-            console.error('✗ Font registration failed - font not available after registration');
-          }
-        } catch (err) {
-          console.error('Font registration error:', err);
-          fontRegistered = false;
-        }
-      } else {
-        console.error('✗ Font file not found at runtime. Current working directory:', process.cwd());
-        console.error('✗ Font registration will fail - Marathi/Hindi text will show as boxes');
-        fontRegistered = false;
-      }
-    } else {
-      fontRegistered = true;
-      console.log('✓ Font already registered and available');
-    }
-
     const body = await request.json();
     const {
       ward,
@@ -160,6 +77,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Register fonts (CRITICAL: Must be inside POST function for Vercel)
+    const fontDir = path.join(process.cwd(), 'fonts');
+
+    // English
+    registerFont(path.join(fontDir, 'Roboto-Regular.ttf'), {
+      family: 'Roboto',
+      weight: 'normal',
+    });
+
+    registerFont(path.join(fontDir, 'Roboto-Bold.ttf'), {
+      family: 'Roboto',
+      weight: 'bold',
+    });
+
+    // Marathi / Hindi
+    registerFont(path.join(fontDir, 'NotoSansDevanagari-Regular.ttf'), {
+      family: 'NotoDev',
+      weight: 'normal',
+    });
+
+    registerFont(path.join(fontDir, 'NotoSansDevanagari-Bold.ttf'), {
+      family: 'NotoDev',
+      weight: 'bold',
+    });
+
+    // Helper function to get font family based on language
+    const getFontFamily = (language: string) =>
+      language === '1' || language === '2'
+        ? 'NotoDev'
+        : 'Roboto';
+
     // Load ward-specific template image from public/final_slip folder
     const templatePath = path.join(process.cwd(), 'public', 'final_slip', `${ward}.jpeg`);
     
@@ -177,6 +125,13 @@ export async function POST(request: NextRequest) {
     const canvas = createCanvas(templateImage.width, templateImage.height);
     const ctx = canvas.getContext('2d');
 
+    // OPTIONAL DEBUG: Uncomment to verify fonts are working
+    // ctx.font = "30px Roboto";
+    // ctx.fillText("English OK", 50, 50);
+    // ctx.font = "30px NotoDev";
+    // ctx.fillText("मराठी ठीक आहे", 50, 100);
+    // If both show correctly → fonts are working ✅
+
     // Draw template image
     ctx.drawImage(templateImage, 0, 0);
 
@@ -184,6 +139,9 @@ export async function POST(request: NextRequest) {
     const fontColor = '#000000';
     const lineHeight = fontSize * 1.5;
     const maxWidth = 850;
+    
+    // Get font family based on language
+    const fontFamily = getFontFamily(language);
     
     ctx.fillStyle = fontColor;
     ctx.textAlign = 'left';
@@ -196,76 +154,13 @@ export async function POST(request: NextRequest) {
     const addressRightPadding = 250; // Right padding for Polling Station Address field
     const y = [141, 144, 145, 147].includes(parseInt(ward)) ? 380 : 340;
 
-    const isIndicLanguage = language === '1' || language === '2';
-    // Use registered Devanagari font if available
-    // For English, always use Arial
-    // Note: If Devanagari font isn't registered, we'll still try to use it
-    // as canvas might have a fallback, but text may render as boxes
-    const baseFontFamily = isIndicLanguage 
-      ? (fontRegistered ? DEVANAGARI_FONT_FAMILY : 'Arial')
-      : 'Arial';
-    
-    // Log font being used for debugging
-    if (isIndicLanguage && !fontRegistered) {
-      const currentFontPath = getFontPath();
-      console.warn(`Devanagari font not registered! Font path: ${currentFontPath || 'NOT FOUND'}`);
-      if (currentFontPath) {
-        console.warn(`Font file exists: ${fs.existsSync(currentFontPath)}`);
-      }
-      try {
-        const families = Array.from(GlobalFonts.families).slice(0, 10);
-        console.warn(`Available fonts: ${families.join(', ')}`);
-      } catch (e) {
-        console.warn('Could not list available fonts');
-      }
-    }
-    console.log(`Using font: ${baseFontFamily} for language: ${language}, font registered: ${fontRegistered}`);
-    
-    // Final verification - check if font is actually available
-    if (isIndicLanguage && fontRegistered) {
-      const fontAvailable = GlobalFonts.has(DEVANAGARI_FONT_FAMILY);
-      if (!fontAvailable) {
-        console.error(`CRITICAL: Font ${DEVANAGARI_FONT_FAMILY} was marked as registered but is not available!`);
-        const currentFontPath = getFontPath();
-        if (currentFontPath) {
-          console.error(`Font file exists: ${fs.existsSync(currentFontPath)}`);
-          console.error(`Font path: ${currentFontPath}`);
-        } else {
-          console.error('Font path not found');
-        }
-      } else {
-        console.log(`✓ Font ${DEVANAGARI_FONT_FAMILY} verified and available`);
-      }
-    }
-    
-    // Helper function to safely set font
-    const setFont = (weight: string = '', size: number = fontSize, family: string = baseFontFamily) => {
-      try {
-        // Verify font is available if using Devanagari font
-        if (family === DEVANAGARI_FONT_FAMILY && !GlobalFonts.has(DEVANAGARI_FONT_FAMILY)) {
-          console.warn(`Font ${DEVANAGARI_FONT_FAMILY} not available, falling back to Arial`);
-          family = 'Arial';
-        }
-        const fontString = weight ? `${weight} ${size}px ${family}` : `${size}px ${family}`;
-        ctx.font = fontString;
-        // Log font being set for debugging (only for first few calls to avoid spam)
-        if (Math.random() < 0.1) { // Log ~10% of calls
-          console.log(`Font set to: ${fontString}`);
-        }
-      } catch (err) {
-        console.error('Error setting font, using Arial fallback:', err);
-        ctx.font = weight ? `${weight} ${size}px Arial` : `${size}px Arial`;
-      }
-    };
-
     let currentY = y;
     rows.forEach(({ label, value }) => {
       const isPollingStationAddress = 
         label === 'मतदान केंद्र पत्ता:' || 
         label === 'Polling Station Address:';
       
-      // Set font using helper
-      setFont();
+      ctx.font = `${fontSize}px ${fontFamily}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const labelText = `${label} `;
@@ -296,7 +191,7 @@ export async function POST(request: NextRequest) {
       let currentYForLine = currentY;
       
       if (!hasSeparators) {
-        setFont('bold');
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         
@@ -329,7 +224,7 @@ export async function POST(request: NextRequest) {
         }
         
         ctx.save();
-        setFont('bold');
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         ctx.fillStyle = fontColor;
@@ -363,7 +258,7 @@ export async function POST(request: NextRequest) {
             const separator = segIdx > 0 ? ' | ' : '';
             const fullLabelText = `${separator}${embeddedLabel} `;
             
-            setFont();
+            ctx.font = `${fontSize}px ${fontFamily}`;
             const labelMetrics = ctx.measureText(fullLabelText);
             
             if (currentX + labelMetrics.width > rightEdge && segIdx > 0) {
@@ -383,7 +278,7 @@ export async function POST(request: NextRequest) {
               currentX += labelMetrics.width;
             }
             
-            setFont('bold');
+            ctx.font = `bold ${fontSize}px ${fontFamily}`;
             const valueMetrics = ctx.measureText(embeddedValue);
             
             if (currentX + valueMetrics.width > rightEdge) {
@@ -401,7 +296,7 @@ export async function POST(request: NextRequest) {
             ctx.fillText(embeddedValue, currentX, currentYForLine);
             currentX += valueMetrics.width;
           } else {
-            setFont('bold');
+            ctx.font = `bold ${fontSize}px ${fontFamily}`;
             const separator = segIdx > 0 ? ' | ' : '';
             const words = segment.split(' ').filter(w => w.length > 0);
             let lineWords: string[] = [];
@@ -474,7 +369,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const buffer = canvas.toBuffer('image/jpeg', 0.92);
+    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.92 });
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,

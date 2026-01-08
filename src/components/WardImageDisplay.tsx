@@ -11,6 +11,7 @@ interface WardImageDisplayProps {
 
 export default function WardImageDisplay({ ward, language, onContinue }: WardImageDisplayProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,18 +56,18 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
   }, []);
   // Mapping of ward numbers to slip images
   const wardToImageMap: { [key: string]: string } = {
-    '140': '/Slips/140.jpeg',
+    '140': '/Slips/140.jpg',
     '141': '/Slips/141.jpeg',
-    '143': '/Slips/143.jpeg',
-    '144': '/Slips/144.jpeg',
-    '145': '/Slips/145.jpeg',
-    '146': '/Slips/146.jpeg',
-    '147': '/Slips/147.jpeg',
-    '148': '/Slips/148.jpeg',
+    '143': '/Slips/143.jpg',
+    '144': '/Slips/144.jpg',
+    '145': '/Slips/145.jpg',
+    '146': '/Slips/146.jpg',
+    '147': '/Slips/147.jpg',
+    '148': '/Slips/148.jpg',
   };
 
   // Get the image for the selected ward, or use a default
-  const wardImage = wardToImageMap[ward] || '/Slips/140.jpeg';
+  const wardImage = wardToImageMap[ward] || '/Slips/140.jpg';
 
   const translations: { [key: string]: { title: string; continueButton: string } } = {
     '1': {
@@ -107,13 +108,31 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
             </div>
           )}
 
+          {/* Error message if image fails to load */}
+          {imageError && isImageLoaded && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-red-50/90 backdrop-blur-sm">
+              <p className="text-sm text-red-600 text-center px-4">
+                {language === '3'
+                  ? `Image for Ward ${ward} not found`
+                  : `वार्ड ${ward} चे छायाचित्र सापडले नाही`}
+              </p>
+            </div>
+          )}
+
           <Image
             src={wardImage}
             alt={`Ward ${ward} Information`}
             fill
             className="object-contain"
             sizes="(max-width: 768px) 100vw, 400px"
-            onLoad={() => setIsImageLoaded(true)}
+            onLoad={() => {
+              setIsImageLoaded(true);
+              setImageError(false);
+            }}
+            onError={() => {
+              setIsImageLoaded(true);
+              setImageError(true);
+            }}
           />
         </div>
       </div>
