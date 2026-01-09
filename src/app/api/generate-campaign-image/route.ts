@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
+    let {
       ward,
       language,
       voterDetails,
@@ -34,17 +34,20 @@ export async function POST(request: NextRequest) {
     // Generate structured rows (label + value) based on language
     let rows: { label: string; value: string }[] = [];
     
-    const pollingStation = voterDetails.pollingStation && voterDetails.pollingStation.length > 40 
-      ? voterDetails.pollingStation.substring(0, 40) 
+    // voterDetails.pollingAddress ='Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu'
+    const pollingStation = voterDetails.pollingStation && voterDetails.pollingStation.length > 50
+      ? voterDetails.pollingStation.substring(0, 50) 
       : (voterDetails.pollingStation || 'N/A');
-    const pollingStationAddress = voterDetails.pollingAddress || 'N/A';
+    const pollingStationAddress = voterDetails.pollingAddress && voterDetails.pollingAddress.length > 100
+      ? voterDetails.pollingAddress.substring(0, 100)
+      : (voterDetails.pollingAddress || 'N/A');
     
     if (language === '1') { // Marathi
       rows = [
         { label: 'नाव:', value: voterDetails.name || 'N/A' },
         { label: 'EPIC क्रमांक:', value: voterDetails.epic || 'N/A' },
         { label: 'वय:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'SR क्र.:', value: `${srNo || 'N/A'} | भाग क्र.: ${voterDetails.partBooth || 'N/A'}` },
+        { label: 'SR क्र.:', value: `${srNo || 'N/A'} | भाग क्र.: ${voterDetails.partBooth || 'N/A'} | प्रभाग: ${ward || 'N/A'}` },
         { label: 'मतदान केंद्र:', value: pollingStation },
         { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
       ];
@@ -53,25 +56,22 @@ export async function POST(request: NextRequest) {
         { label: 'नाम:', value: voterDetails.name || 'N/A' },
         { label: 'EPIC नंबर:', value: voterDetails.epic || 'N/A' },
         { label: 'आयु:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'SR नं.:', value: `${srNo || 'N/A'} | भाग नं.: ${voterDetails.partBooth || 'N/A'}` },
+        { label: 'SR नं.:', value: `${srNo || 'N/A'} | भाग नं.: ${voterDetails.partBooth || 'N/A'} | वार्ड: ${ward || 'N/A'}` },
         { label: 'मतदान केंद्र:', value: pollingStation },
         { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
       ];
     } else { // English
       rows = [
-        { label: 'Name:', value: voterDetails.name || 'N/A' },
+        { label: 'Name:', value: `${voterDetails.name || 'N/A'} | Age: ${voterDetails.age || 'N/A'} | Gender: ${voterDetails.gender || 'N/A'}` },
         { label: 'EPIC No.:', value: voterDetails.epic || 'N/A' },
-        { label: 'Age:', value: `${voterDetails.age || 'N/A'} | Gender: ${voterDetails.gender || 'N/A'}` },
-        { label: 'SR No.:', value: `${srNo || 'N/A'} | Part No.: ${voterDetails.partBooth || 'N/A'}` },
+        { label: 'SR No.:', value: `${srNo || 'N/A'} | Part No.: ${voterDetails.partBooth || 'N/A'} | Ward: ${ward || 'N/A'}` },
         { label: 'Polling Station:', value: pollingStation },
-        { label: 'Polling Station Address:', value: voterDetails.pollingAddress || 'N/A' },
+        { label: 'Polling Station Address:', value: pollingStationAddress },
       ];
     }
 
     // Validate ward number - convert to string for comparison
-    // Validate ward against configured ward(s) from environment variable
-    const configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
-    const validWards = configuredWard.split(',').map(w => w.trim()).filter(w => w.length > 0);
+    const validWards = ['140', '141', '143', '144', '145', '146', '147', '148'];
     const wardString = String(ward); // Convert to string to handle both number and string inputs
     if (!validWards.includes(wardString)) {
       return NextResponse.json(
@@ -141,9 +141,9 @@ export async function POST(request: NextRequest) {
     // Draw template image
     ctx.drawImage(templateImage, 0, 0);
 
-    const fontSize = 24;
+    const fontSize = 28; // Increased font size
     const fontColor = '#000000';
-    const lineHeight = fontSize * 1.5;
+    const lineHeight = fontSize * 1.5; // Keep original spacing
     const maxWidth = 850;
     
     // Get font family based on language
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     const valueX = 50;
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
-    const addressRightPadding = 250; // Right padding for Polling Station Address field
+    const addressRightPadding = 250; // No right padding for any field
     const y = [141, 144, 145, 147].includes(parseInt(wardForPath)) ? 380 : 340;
 
     let currentY = y;
