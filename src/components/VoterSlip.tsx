@@ -25,6 +25,7 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Ensure portal only renders on client
   useEffect(() => {
@@ -66,14 +67,17 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
           const blob = await response.blob();
           const imageUrl = URL.createObjectURL(blob);
           setCampaignImageUrl(imageUrl);
+          setError(null);
           // Auto-open modal in fullscreen when image is ready
           setIsModalOpen(true);
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.error('Failed to generate campaign image:', response.status, errorData);
+          setError(errorData.error || 'Failed to generate campaign image');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error generating campaign image:', error);
+        setError(error.message || 'Error generating campaign image');
       } finally {
         setIsGeneratingCampaign(false);
       }
@@ -188,6 +192,58 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
             <p className="text-sm text-gray-600">{texts.generatingCampaign}</p>
           </div>
+        </div>
+      ) : error ? (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setIsGeneratingCampaign(true);
+              // Retry generation
+              const generateCampaignImage = async () => {
+                if (!voterDetails.ward) return;
+                try {
+                  const response = await fetch('/api/generate-campaign-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ward: voterDetails.ward,
+                      language: language,
+                      voterDetails: {
+                        name: voterDetails.name,
+                        epic: voterDetails.epic,
+                        age: voterDetails.age,
+                        gender: voterDetails.gender || 'N/A',
+                        sr_no: voterDetails.sr_no ?? null,
+                        partBooth: voterDetails.partBooth,
+                        pollingStation: voterDetails.pollingStation,
+                        pollingAddress: voterDetails.pollingAddress,
+                      },
+                    }),
+                  });
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    setCampaignImageUrl(imageUrl);
+                    setError(null);
+                    setIsModalOpen(true);
+                  } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    setError(errorData.error || 'Failed to generate campaign image');
+                  }
+                } catch (err: any) {
+                  setError(err.message || 'Error generating campaign image');
+                } finally {
+                  setIsGeneratingCampaign(false);
+                }
+              };
+              generateCampaignImage();
+            }}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            {language === '1' ? 'पुन्हा प्रयत्न करा' : language === '2' ? 'पुनः प्रयास करें' : 'Retry'}
+          </button>
         </div>
       ) : campaignImageUrl ? (
         <>

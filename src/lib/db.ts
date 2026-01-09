@@ -1,8 +1,11 @@
 import { Client } from 'pg';
 
-// Database connection string
-const connectionString = process.env.DATABASE_URL || 
-  'postgresql://neondb_owner:npg_3ReFIJC9cGXy@ep-dark-bird-adq3eh0o-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+// Database connection string - must be set in environment variables
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 
 // Query helper function - creates a new connection for each query (serverless-friendly)
 export async function query(text: string, params?: any[]) {

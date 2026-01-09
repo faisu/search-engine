@@ -15,44 +15,28 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Scroll into view when component first appears - optimized for mobile/tablet
-    const scrollToComponent = () => {
-      if (containerRef.current) {
-        // Small delay to ensure component is fully rendered
-        setTimeout(() => {
-          if (containerRef.current) {
-            const isMobile = window.innerWidth < 768;
-            const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-            
-            // For mobile/tablet, use center alignment for better visibility
-            // For desktop, use start alignment
-            const blockValue = (isMobile || isTablet) ? 'center' : 'start';
-            
-            containerRef.current.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: blockValue,
-              inline: 'nearest'
-            });
-            
-            // Fallback for better mobile support - adjust scroll position manually
-            if (isMobile || isTablet) {
-              setTimeout(() => {
-                const currentRect = containerRef.current?.getBoundingClientRect();
-                if (currentRect) {
-                  const scrollOffset = currentRect.top + window.scrollY - (window.innerHeight / 2) + (currentRect.height / 2);
-                  window.scrollTo({
-                    top: Math.max(0, scrollOffset),
-                    behavior: 'smooth'
-                  });
-                }
-              }, 100);
-            }
-          }
-        }, 50);
-      }
+    // Scroll to top of the page when component first appears
+    const scrollToTop = () => {
+      // Small delay to ensure component is fully rendered
+      setTimeout(() => {
+        // Scroll to the top of the page
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+        
+        // Also ensure the component container is at the top
+        if (containerRef.current) {
+          containerRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+      }, 50);
     };
 
-    scrollToComponent();
+    scrollToTop();
   }, []);
   // Mapping of ward numbers to slip images
   const wardToImageMap: { [key: string]: string } = {

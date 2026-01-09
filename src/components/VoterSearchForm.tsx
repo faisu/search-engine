@@ -32,6 +32,10 @@ export default function VoterSearchForm() {
   const handleWardSelect = (ward: string) => {
     setSelectedWard(ward);
     setCurrentStep('wardImage');
+    // Scroll to top when ward is selected
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleWardImageContinue = () => {

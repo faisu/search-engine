@@ -68,14 +68,18 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // Validate ward number
+    // Validate ward number - convert to string for comparison
     const validWards = ['140', '141', '143', '144', '145', '146', '147', '148'];
-    if (!validWards.includes(ward)) {
+    const wardString = String(ward); // Convert to string to handle both number and string inputs
+    if (!validWards.includes(wardString)) {
       return NextResponse.json(
         { error: `Invalid ward number: ${ward}. Valid wards are: ${validWards.join(', ')}` },
         { status: 400 }
       );
     }
+    
+    // Use wardString for file path
+    const wardForPath = wardString;
 
     // Register fonts (CRITICAL: Must be inside POST function for Vercel)
     const fontDir = path.join(process.cwd(), 'fonts');
@@ -109,7 +113,7 @@ export async function POST(request: NextRequest) {
         : 'Roboto';
 
     // Load ward-specific template image from public/final_slip folder
-    const templatePath = path.join(process.cwd(), 'public', 'final_slip', `${ward}.jpeg`);
+    const templatePath = path.join(process.cwd(), 'public', 'final_slip', `${wardForPath}.jpeg`);
     
     if (!fs.existsSync(templatePath)) {
       return NextResponse.json(
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest) {
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
     const addressRightPadding = 250; // Right padding for Polling Station Address field
-    const y = [141, 144, 145, 147].includes(parseInt(ward)) ? 380 : 340;
+    const y = [141, 144, 145, 147].includes(parseInt(wardForPath)) ? 380 : 340;
 
     let currentY = y;
     rows.forEach(({ label, value }) => {
@@ -375,7 +379,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
-        'Content-Disposition': `inline; filename="campaign-${ward}-${voterDetails.epic || 'voter'}.jpg"`,
+        'Content-Disposition': `inline; filename="campaign-${wardForPath}-${voterDetails.epic || 'voter'}.jpg"`,
       },
     });
   } catch (error) {

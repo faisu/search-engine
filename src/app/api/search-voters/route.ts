@@ -28,6 +28,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Convert ward to integer for database query (ward_no is INTEGER in database)
+    const wardNumber = parseInt(ward, 10);
+    if (isNaN(wardNumber)) {
+      return NextResponse.json(
+        { error: 'Invalid ward number format' },
+        { status: 400 }
+      );
+    }
+
     // Validate method
     if (method !== '1' && method !== '2') {
       return NextResponse.json(
@@ -91,13 +100,13 @@ export async function GET(request: NextRequest) {
             const patternParamNum = patternStartParam;
             whereClause = `(
               full_name % $1 
-              OR relation_name % $1
+              OR relative_full_name % $1
               OR full_name % $${paramNum}
-              OR relation_name % $${paramNum}
+              OR relative_full_name % $${paramNum}
               OR full_name ILIKE $2
-              OR relation_name ILIKE $2
+              OR relative_full_name ILIKE $2
               OR full_name ILIKE $${patternParamNum}
-              OR relation_name ILIKE $${patternParamNum}
+              OR relative_full_name ILIKE $${patternParamNum}
             )`;
           } else {
             // Multi-word search - require at least 2 words to match
@@ -106,8 +115,8 @@ export async function GET(request: NextRequest) {
               const paramNum = wordStartParam + idx;
               const patternParamNum = patternStartParam + idx;
               return `(
-                full_name % $${paramNum} OR relation_name % $${paramNum}
-                OR full_name ILIKE $${patternParamNum} OR relation_name ILIKE $${patternParamNum}
+                full_name % $${paramNum} OR relative_full_name % $${paramNum}
+                OR full_name ILIKE $${patternParamNum} OR relative_full_name ILIKE $${patternParamNum}
               )`;
             });
             
@@ -131,9 +140,9 @@ export async function GET(request: NextRequest) {
             // Also allow exact full match or high similarity full string match
             // This handles typos in the search query (e.g., "mailk" vs "malik")
             whereClause = `(
-              full_name ILIKE $2 OR relation_name ILIKE $2
+              full_name ILIKE $2 OR relative_full_name ILIKE $2
               OR (full_name % $1 AND similarity(full_name, $1) > 0.3)
-              OR (relation_name % $1 AND similarity(relation_name, $1) > 0.3)
+              OR (relative_full_name % $1 AND similarity(relative_full_name, $1) > 0.3)
               OR ${combinations.join(' OR ')}${allWordsCondition}
             )`;
           }
@@ -142,17 +151,17 @@ export async function GET(request: NextRequest) {
           const scoreCases = [
             // Full string similarity
             `COALESCE(similarity(full_name, $1), 0)`,
-            `COALESCE(similarity(relation_name, $1), 0)`,
+            `COALESCE(similarity(relative_full_name, $1), 0)`,
             // Exact full match
             `CASE WHEN full_name ILIKE $2 THEN 0.95 ELSE 0 END`,
-            `CASE WHEN relation_name ILIKE $2 THEN 0.85 ELSE 0 END`,
+            `CASE WHEN relative_full_name ILIKE $2 THEN 0.85 ELSE 0 END`,
           ];
           
           // Add trigram similarity score for EACH word individually
           nameWords.forEach((_, idx) => {
             const paramNum = wordStartParam + idx; // $3, $4, $5, etc. for each word
             scoreCases.push(`COALESCE(similarity(full_name, $${paramNum}), 0)`);
-            scoreCases.push(`COALESCE(similarity(relation_name, $${paramNum}), 0)`);
+            scoreCases.push(`COALESCE(similarity(relative_full_name, $${paramNum}), 0)`);
           });
           
           // Add ILIKE pattern scores for each word
@@ -160,7 +169,7 @@ export async function GET(request: NextRequest) {
             const paramNum = patternStartParam + idx; // Patterns start at patternStartParam
             const baseScore = 0.6 - (idx * 0.05);
             scoreCases.push(`CASE WHEN full_name ILIKE $${paramNum} THEN ${baseScore} ELSE 0 END`);
-            scoreCases.push(`CASE WHEN relation_name ILIKE $${paramNum} THEN ${baseScore - 0.1} ELSE 0 END`);
+            scoreCases.push(`CASE WHEN relative_full_name ILIKE $${paramNum} THEN ${baseScore - 0.1} ELSE 0 END`);
           });
           
           // Count how many words match - this is critical for multi-word searches
@@ -170,8 +179,8 @@ export async function GET(request: NextRequest) {
               // Check both trigram match and ILIKE match for each word
               const patternParamNum = patternStartParam + idx;
               return `(
-                CASE WHEN full_name % $${paramNum} OR relation_name % $${paramNum} 
-                     OR full_name ILIKE $${patternParamNum} OR relation_name ILIKE $${patternParamNum}
+                CASE WHEN full_name % $${paramNum} OR relative_full_name % $${paramNum} 
+                     OR full_name ILIKE $${patternParamNum} OR relative_full_name ILIKE $${patternParamNum}
                 THEN 1 ELSE 0 END
               )`;
             })
@@ -211,30 +220,30 @@ export async function GET(request: NextRequest) {
               epic_number,
               full_name,
               age,
-              part_no,
+              booth_no,
               sr_no,
-              address,
-              house_number,
+              locality_street,
+              town_village,
               gender,
-              pincode,
               GREATEST(${scoreCases.join(', ')}) as match_score,
               (${wordMatchCount}) as words_matched
-            FROM public."Voter"
+            FROM voters
+            FROM voters
             WHERE 
-              part_no in (select part_no from "PartNo" where ward_no = $${wardParam})
+              ward_no = $${wardParam}
               AND ${whereClause}
             ORDER BY words_matched DESC, match_score DESC, full_name ASC
             LIMIT 50;
           `;
           
-          // Build parameters array: [searchName, exactMatch, word1, word2, ..., pattern1, pattern2, ..., ward]
+          // Build parameters array: [searchName, exactMatch, word1, word2, ..., pattern1, pattern2, ..., wardNumber]
           // Note: exactMatch is already at $2, so we only include wordPatterns (not allPatterns which includes exactMatch)
           const queryParams = [
             searchName,        // $1 - full search string for trigram
             exactMatch,        // $2 - exact pattern
             ...nameWords,      // $3, $4, $5... - individual words for trigram
             ...wordPatterns,   // Patterns for ILIKE (not including exactMatch again)
-            ward              // Ward number
+            wardNumber         // Ward number (integer)
           ];
           
           const fuzzyResult = await query(fuzzyQuery, queryParams);
@@ -262,7 +271,7 @@ export async function GET(request: NextRequest) {
           
           // Build WHERE conditions for each pattern (ward is $1, patterns start at $2)
           const whereConditions = allPatterns
-            .map((_, idx) => `(full_name ILIKE $${idx + 2} OR relation_name ILIKE $${idx + 2})`)
+            .map((_, idx) => `(full_name ILIKE $${idx + 2} OR relative_full_name ILIKE $${idx + 2})`)
             .join(' OR ');
           
           // Calculate match score based on pattern matches
@@ -277,7 +286,7 @@ export async function GET(request: NextRequest) {
           wordPatterns.forEach((_, idx) => {
             const paramNum = idx + 4;
             scoreCases.push(`CASE WHEN full_name ILIKE $${paramNum} THEN ${5 - idx} ELSE 0 END`);
-            scoreCases.push(`CASE WHEN relation_name ILIKE $${paramNum} THEN ${4 - idx} ELSE 0 END`);
+            scoreCases.push(`CASE WHEN relative_full_name ILIKE $${paramNum} THEN ${4 - idx} ELSE 0 END`);
           });
           
           const fallbackQuery = `
@@ -285,22 +294,21 @@ export async function GET(request: NextRequest) {
               epic_number,
               full_name,
               age,
-              part_no,
+              booth_no,
               sr_no,
-              address,
-              house_number,
+              locality_street,
+              town_village,
               gender,
-              pincode,
               (${scoreCases.join(' + ')}) as match_score
-            FROM public."Voter"
+            FROM voters
             WHERE 
-              part_no in (select part_no from "PartNo" where ward_no = $1)
+              ward_no = $1
               AND (${whereConditions})
             ORDER BY match_score DESC, full_name ASC
             LIMIT 50;
           `;
           
-          const params = [ward, ...allPatterns];
+          const params = [wardNumber, ...allPatterns];
           const fallbackResult = await query(fallbackQuery, params);
           results = fallbackResult.rows
             .filter(row => row.match_score > 0)
@@ -314,44 +322,41 @@ export async function GET(request: NextRequest) {
             epic_number,
             full_name,
             age,
-            part_no,
+            booth_no,
             sr_no,
-            address,
-            house_number,
-            gender,
-            pincode
-          FROM public."Voter"
+            locality_street,
+            town_village,
+            gender
+          FROM voters
           WHERE 
-            part_no in (select part_no from "PartNo" where ward_no = $1)
-            AND (full_name ILIKE $2 OR relation_name ILIKE $2)
+            ward_no = $1
+            AND (full_name ILIKE $2 OR relative_full_name ILIKE $2)
           ORDER BY full_name ASC
           LIMIT 50;
         `;
         const searchPattern = `%${searchName}%`;
-        const simpleResult = await query(simpleQuery, [ward, searchPattern]);
+        const simpleResult = await query(simpleQuery, [wardNumber, searchPattern]);
         results = simpleResult.rows;
       }
     } else {
       // EPIC search - exact match (case-insensitive)
-      // Use PartNo table to get all part_no values for the ward
       const searchQuery = `
         SELECT 
           epic_number,
           full_name,
           age,
-          part_no,
+          booth_no,
           sr_no,
-          address,
-          house_number,
-          gender,
-          pincode
-        FROM public."Voter"
-        WHERE part_no in (select part_no from "PartNo" where ward_no = $1)
+          locality_street,
+          town_village,
+          gender
+        FROM voters
+        WHERE ward_no = $1
           AND UPPER(epic_number) = UPPER($2)
         LIMIT 50;
       `;
       const searchPattern = queryText.trim();
-      const result = await query(searchQuery, [ward, searchPattern]);
+      const result = await query(searchQuery, [wardNumber, searchPattern]);
       results = result.rows;
     }
 
@@ -361,12 +366,12 @@ export async function GET(request: NextRequest) {
       name: row.full_name,
       age: row.age || null,
       epic: row.epic_number,
-      ward: row.part_no,
+      ward: row.booth_no, // Using booth_no instead of part_no
       sr_no: row.sr_no,
-      address: row.address || null,
-      house_number: row.house_number || null,
+      address: row.locality_street || row.town_village || null,
+      house_number: null, // Not in new schema
       gender: row.gender || null,
-      pincode: row.pincode || null,
+      pincode: null, // Not in new schema
     }));
 
     return NextResponse.json({
