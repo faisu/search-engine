@@ -29,7 +29,16 @@ export default function VoterSearchForm() {
   useEffect(() => {
     const fetchConfiguredWard = async () => {
       try {
-        const response = await fetch('/api/configured-ward');
+        // Get wardSet from URL parameter (e.g., ?wardSet=165, ?set=165, or ?ward=165)
+        const urlParams = new URLSearchParams(window.location.search);
+        const wardSet = urlParams.get('wardSet') || urlParams.get('set') || urlParams.get('ward');
+        
+        // Build API URL with parameter if present
+        const apiUrl = wardSet 
+          ? `/api/configured-ward?wardSet=${encodeURIComponent(wardSet)}`
+          : '/api/configured-ward';
+        
+        const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
           if (data.success) {

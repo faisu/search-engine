@@ -1,20 +1,69 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Mark as dynamic to ensure it reads environment variables at runtime
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+// Get ward configuration based on ward set identifier
+const getWardConfig = (wardSet: string | null): string | null => {
+  if (!wardSet) return null;
+
+  const set = wardSet.toLowerCase().trim();
+
+  // Check environment variables for each ward set
+  // You can define these in Vercel: WARD_SET_165, WARD_SET_170, WARD_SET_168, WARD_SET_MULTIPLE
+  if (set === '165' || set === 'ward165' || set === 'ward-165') {
+    return process.env.WARD_SET_165 || '165';
+  }
+  if (set === '170' || set === 'ward170' || set === 'ward-170') {
+    return process.env.WARD_SET_170 || '170';
+  }
+  if (set === '168' || set === 'ward168' || set === 'ward-168') {
+    return process.env.WARD_SET_168 || '168';
+  }
+  if (set === 'multiple' || set === 'all' || set === 'voters' || set === 'multi') {
+    return process.env.WARD_SET_MULTIPLE || '140,141,143,144,145,146,147,148';
+  }
+
+  return null;
+};
+
+export async function GET(request: NextRequest) {
   try {
-    // Get ward from environment variable
-    // Can be a single ward (e.g., "140") or comma-separated list (e.g., "140,141,143")
-    const configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
+    // Get ward set from URL parameter (e.g., ?wardSet=165 or ?set=165)
+    const searchParams = request.nextUrl.searchParams;
+    const wardSet = searchParams.get('wardSet') || searchParams.get('set') || searchParams.get('ward');
+    
+    // Try to get ward config from URL parameter
+    let configuredWard = getWardConfig(wardSet);
+    
+    // Fallback to hostname detection
+    if (!configuredWard) {
+      const hostname = request.headers.get('host') || request.headers.get('x-forwarded-host');
+      if (hostname) {
+        const host = hostname.split(':')[0].toLowerCase();
+        if (host.includes('165') || host.includes('ward-165') || host.includes('ward165')) {
+          configuredWard = process.env.WARD_SET_165 || '165';
+        } else if (host.includes('170') || host.includes('ward-170') || host.includes('ward170')) {
+          configuredWard = process.env.WARD_SET_170 || '170';
+        } else if (host.includes('168') || host.includes('ward-168') || host.includes('ward168')) {
+          configuredWard = process.env.WARD_SET_168 || '168';
+        } else if (host.includes('multiple') || host.includes('all') || host.includes('voters')) {
+          configuredWard = process.env.WARD_SET_MULTIPLE || '140,141,143,144,145,146,147,148';
+        }
+      }
+    }
+    
+    // Final fallback to default CONFIGURED_WARD
+    if (!configuredWard) {
+      configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
+    }
     
     // Parse ward(s) - support both single ward and comma-separated list
     const wards = configuredWard.split(',').map(w => w.trim()).filter(w => w.length > 0);
     
     if (wards.length === 0) {
       return NextResponse.json(
-        { error: 'No ward configured. Please set CONFIGURED_WARD environment variable.' },
+        { error: 'No ward configured. Please set WARD_SET_* environment variables or use ?wardSet= parameter in URL.' },
         { status: 500 }
       );
     }
@@ -27,6 +76,7 @@ export async function GET() {
       ward: wards[0], // Default/active ward (first one)
       allWards: wards, // All configured wards
       isMultiple: wards.length > 1, // Flag to indicate if multiple wards are configured
+      wardSet: wardSet, // Return which ward set was used
     });
   } catch (error: any) {
     console.error('Error getting configured ward:', error);
