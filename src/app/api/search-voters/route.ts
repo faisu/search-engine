@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getValidWards } from '@/lib/ward-config';
 
 // Mark as dynamic to suppress build warnings (this route uses query parameters)
 export const dynamic = 'force-dynamic';
@@ -19,9 +20,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate ward against configured ward(s) from environment variable
-    const configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
-    const validWards = configuredWard.split(',').map(w => w.trim()).filter(w => w.length > 0);
+    // Validate ward against configured ward(s) from URL parameter or environment variables
+    const validWards = getValidWards(request);
     
     if (!validWards.includes(ward)) {
       return NextResponse.json(

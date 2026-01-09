@@ -53,13 +53,25 @@ export default function VoterSearchForm() {
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
+          console.log('Frontend - API Response:', data);
           if (data.success) {
-            setConfiguredWards(data.allWards || []);
-            setIsMultipleWards(data.isMultiple || false);
+            const allWards = data.allWards || [];
+            const isMultiple = data.isMultiple || false;
+            
+            console.log('Frontend - Setting configuredWards:', allWards);
+            console.log('Frontend - Setting isMultipleWards:', isMultiple);
+            
+            // Update state
+            setConfiguredWards(allWards);
+            setIsMultipleWards(isMultiple);
             
             // If only one ward is configured, auto-select it
-            if (!data.isMultiple && data.ward) {
+            if (!isMultiple && data.ward) {
+              console.log('Frontend - Auto-selecting ward:', data.ward);
               setSelectedWard(data.ward);
+            } else if (!isMultiple && allWards.length === 1) {
+              console.log('Frontend - Auto-selecting ward from allWards:', allWards[0]);
+              setSelectedWard(allWards[0]);
             }
             // If multiple wards, don't auto-select - let user choose
           } else {
@@ -82,22 +94,44 @@ export default function VoterSearchForm() {
   const handleLanguageSelect = (language: string) => {
     setSelectedLanguage(language);
     
-    // If multiple wards configured, show ward selection
-    if (isMultipleWards && configuredWards.length > 1) {
-    setCurrentStep('ward');
-    } 
-    // If single ward configured, auto-select it and go to ward image
-    else if (!isMultipleWards && configuredWards.length === 1) {
-      setSelectedWard(configuredWards[0]);
-      setCurrentStep('wardImage');
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
-    } 
-    // If no wards configured, show error
-    else {
-      setError('Ward configuration is loading. Please wait...');
-    }
+    // Use a function to get the latest state values
+    const checkWardConfig = () => {
+      // Re-read the state values to ensure we have the latest
+      const currentIsMultiple = isMultipleWards;
+      const currentWards = configuredWards;
+      
+      console.log('handleLanguageSelect - isMultipleWards:', currentIsMultiple);
+      console.log('handleLanguageSelect - configuredWards:', currentWards);
+      console.log('handleLanguageSelect - configuredWards.length:', currentWards.length);
+      
+      // If multiple wards configured, show ward selection
+      if (currentIsMultiple && currentWards.length > 1) {
+        console.log('handleLanguageSelect - Showing ward selection');
+        setCurrentStep('ward');
+      } 
+      // If single ward configured, auto-select it and go to ward image
+      else if (!currentIsMultiple && currentWards.length === 1) {
+        console.log('handleLanguageSelect - Auto-selecting ward:', currentWards[0]);
+        setSelectedWard(currentWards[0]);
+        setCurrentStep('wardImage');
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
+      } 
+      // If no wards configured yet, wait a bit and try again
+      else if (currentWards.length === 0) {
+        console.log('handleLanguageSelect - No wards configured yet, waiting...');
+        setTimeout(checkWardConfig, 200);
+      }
+      // If no wards configured, show error
+      else {
+        console.log('handleLanguageSelect - No wards configured, showing error');
+        setError('Ward configuration is loading. Please wait...');
+      }
+    };
+    
+    // Check immediately, and if needed, check again after a short delay
+    checkWardConfig();
   };
 
   const handleWardSelect = (ward: string) => {
@@ -136,9 +170,20 @@ export default function VoterSearchForm() {
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/voter-details?epic=${encodeURIComponent(epic)}&ward=${encodeURIComponent(selectedWard)}`
-      );
+      // Get wardSet from URL parameter to pass to API for validation
+      const urlParams = new URLSearchParams(window.location.search);
+      const wardSet = urlParams.get('wardSet') || 
+                      urlParams.get('wardset') || 
+                      urlParams.get('WardSet') || 
+                      urlParams.get('set') || 
+                      urlParams.get('ward');
+      
+      // Build API URL with wardSet parameter if present
+      const apiUrl = wardSet
+        ? `/api/voter-details?epic=${encodeURIComponent(epic)}&ward=${encodeURIComponent(selectedWard)}&wardSet=${encodeURIComponent(wardSet)}`
+        : `/api/voter-details?epic=${encodeURIComponent(epic)}&ward=${encodeURIComponent(selectedWard)}`;
+      
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
         throw new Error('Failed to fetch voter details');

@@ -42,9 +42,20 @@ export default function ResultList({ onMatchSelect, language, ward, searchMethod
       setError(null);
 
       try {
-        const response = await fetch(
-          `/api/search-voters?ward=${encodeURIComponent(ward)}&method=${encodeURIComponent(searchMethod)}&query=${encodeURIComponent(userInputValue)}`
-        );
+        // Get wardSet from URL parameter to pass to API for validation
+        const urlParams = new URLSearchParams(window.location.search);
+        const wardSet = urlParams.get('wardSet') || 
+                        urlParams.get('wardset') || 
+                        urlParams.get('WardSet') || 
+                        urlParams.get('set') || 
+                        urlParams.get('ward');
+        
+        // Build API URL with wardSet parameter if present
+        const apiUrl = wardSet
+          ? `/api/search-voters?ward=${encodeURIComponent(ward)}&method=${encodeURIComponent(searchMethod)}&query=${encodeURIComponent(userInputValue)}&wardSet=${encodeURIComponent(wardSet)}`
+          : `/api/search-voters?ward=${encodeURIComponent(ward)}&method=${encodeURIComponent(searchMethod)}&query=${encodeURIComponent(userInputValue)}`;
+        
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
           throw new Error('Failed to fetch voters');

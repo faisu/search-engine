@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
+import { getValidWards } from '@/lib/ward-config';
 
 // Mark as dynamic (this route generates images dynamically)
 export const dynamic = 'force-dynamic';
@@ -70,8 +71,8 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // Validate ward number - convert to string for comparison
-    const validWards = ['140', '141', '143', '144', '145', '146', '147', '148'];
+    // Validate ward number - get valid wards based on wardSet URL parameter
+    const validWards = getValidWards(request);
     const wardString = String(ward); // Convert to string to handle both number and string inputs
     if (!validWards.includes(wardString)) {
       return NextResponse.json(
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
     const addressRightPadding = 250; // No right padding for any field
-    const y = [141, 144, 145, 147,140].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
+    const y = [141, 144, 145, 147,140,165,168,170].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
 
     let currentY = y;
     rows.forEach(({ label, value }) => {

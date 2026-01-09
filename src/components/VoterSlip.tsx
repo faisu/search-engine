@@ -42,7 +42,21 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
 
       setIsGeneratingCampaign(true);
       try {
-        const response = await fetch('/api/generate-campaign-image', {
+        // Get wardSet from URL parameter to pass to API for validation
+        const urlParams = new URLSearchParams(window.location.search);
+        const wardSet = urlParams.get('wardSet') || 
+                        urlParams.get('wardset') || 
+                        urlParams.get('WardSet') || 
+                        urlParams.get('WARDSET') ||
+                        urlParams.get('set') || 
+                        urlParams.get('ward');
+        
+        // Build API URL with wardSet parameter if present
+        const apiUrl = wardSet
+          ? `/api/generate-campaign-image?wardSet=${encodeURIComponent(wardSet)}`
+          : '/api/generate-campaign-image';
+        
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -204,7 +218,21 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
               const generateCampaignImage = async () => {
                 if (!voterDetails.ward) return;
                 try {
-                  const response = await fetch('/api/generate-campaign-image', {
+                  // Get wardSet from URL parameter to pass to API for validation
+                  const urlParams = new URLSearchParams(window.location.search);
+                  const wardSet = urlParams.get('wardSet') || 
+                                  urlParams.get('wardset') || 
+                                  urlParams.get('WardSet') || 
+                                  urlParams.get('WARDSET') ||
+                                  urlParams.get('set') || 
+                                  urlParams.get('ward');
+                  
+                  // Build API URL with wardSet parameter if present
+                  const apiUrl = wardSet
+                    ? `/api/generate-campaign-image?wardSet=${encodeURIComponent(wardSet)}`
+                    : '/api/generate-campaign-image';
+                  
+                  const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
