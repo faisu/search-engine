@@ -1,14 +1,15 @@
 import { Client } from 'pg';
 
-// Database connection string - must be set in environment variables
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
-
 // Query helper function - creates a new connection for each query (serverless-friendly)
 export async function query(text: string, params?: any[]) {
+  // Get connection string at runtime (not at module load time)
+  // This prevents build-time errors when DATABASE_URL is not available
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set. Please configure it in your environment variables.');
+  }
+
   const client = new Client({
     connectionString: connectionString,
   });
