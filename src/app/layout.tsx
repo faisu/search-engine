@@ -23,8 +23,8 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  title: "Marketing Chatbot - मार्केटिंग चॅटबॉट",
-  description: "Modern and attractive marketing chatbot for your business needs",
+  title: "Voter Search - मतदार शोध सेवा",
+  description: "Search for voter details by name or EPIC number in your ward. Find your polling station, voter ID, and election information for Brihanmumbai Municipal Corporation elections.",
 };
 
 export default function RootLayout({
