@@ -5,9 +5,10 @@ import { useEffect, useRef } from 'react';
 interface WardSelectionProps {
   onWardSelect: (ward: string) => void;
   language: string;
+  availableWards?: string[]; // Optional: if provided, only show these wards
 }
 
-export default function WardSelection({ onWardSelect, language }: WardSelectionProps) {
+export default function WardSelection({ onWardSelect, language, availableWards }: WardSelectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,7 +52,11 @@ export default function WardSelection({ onWardSelect, language }: WardSelectionP
 
     scrollToComponent();
   }, []);
-  const wards = ['140', '141', '143', '144', '145', '146', '147', '148'];
+  
+  // Use availableWards if provided, otherwise fallback to default wards
+  const wards = availableWards && availableWards.length > 0 
+    ? availableWards 
+    : ['140', '141', '143', '144', '145', '146', '147', '148'];
 
   const translations: { [key: string]: { heading: string; footer: string } } = {
     '1': {

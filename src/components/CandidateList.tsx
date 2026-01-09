@@ -30,9 +30,12 @@ const getCandidateForWard = (ward: string): Candidate | null => {
     // 148: from slip image
     '148': { serialNo: 2, name: 'सोमू चंद पवार' },
     // Other wards currently default to party name at serial no 3
-    '141': { serialNo: 5, name: 'राष्ट्रवादी काँग्रेस पार्टी' },
+    '141': { serialNo: 5, name: 'डॉन चंदू' },
     '143': { serialNo: 3, name: 'कु. रचना गवस' },
     '144': { serialNo: 1, name: 'दिलीप पाटील' },
+    '165': { serialNo: 5, name: 'अब्दुल रशीद (कप्तान) मलिक' },
+    '168': { serialNo: 1, name: 'डॉन चंदू' },
+    '170': { serialNo: 1, name: 'बुशरा नदीम (कप्तान) मलिक' },
   };
 
   const candidateData = wardToCandidateMap[ward];

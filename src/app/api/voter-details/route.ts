@@ -18,12 +18,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate ward against configured ward(s) from environment variable
+    const configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
+    const validWards = configuredWard.split(',').map(w => w.trim()).filter(w => w.length > 0);
+    
+    if (!validWards.includes(ward)) {
+      return NextResponse.json(
+        { error: `Invalid ward number. Allowed ward(s): ${validWards.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Get full voter details from single voters table
     // Convert ward to integer for comparison since ward_no is INTEGER in database
     const wardNumber = parseInt(ward, 10);
     if (isNaN(wardNumber)) {
       return NextResponse.json(
-        { error: 'Invalid ward number' },
+        { error: 'Invalid ward number format' },
         { status: 400 }
       );
     }

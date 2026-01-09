@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate ward number - convert to string for comparison
-    const validWards = ['140', '141', '143', '144', '145', '146', '147', '148'];
+    // Validate ward against configured ward(s) from environment variable
+    const configuredWard = process.env.CONFIGURED_WARD || process.env.NEXT_PUBLIC_WARD || '140';
+    const validWards = configuredWard.split(',').map(w => w.trim()).filter(w => w.length > 0);
     const wardString = String(ward); // Convert to string to handle both number and string inputs
     if (!validWards.includes(wardString)) {
       return NextResponse.json(

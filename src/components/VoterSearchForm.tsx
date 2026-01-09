@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import WelcomeMessage from './WelcomeMessage';
 import WardSelection from './WardSelection';
 import WardImageDisplay from './WardImageDisplay';
@@ -21,12 +21,62 @@ export default function VoterSearchForm() {
   const [error, setError] = useState<string | null>(null);
   const [voterDetails, setVoterDetails] = useState<any>(null);
   const [showSlip, setShowSlip] = useState(false);
+  const [loadingWard, setLoadingWard] = useState(true);
+  const [configuredWards, setConfiguredWards] = useState<string[]>([]);
+  const [isMultipleWards, setIsMultipleWards] = useState(false);
 
-  const validWards = ['140', '141', '143', '144', '145', '146', '147', '148'];
+  // Fetch configured wards from API on component mount
+  useEffect(() => {
+    const fetchConfiguredWard = async () => {
+      try {
+        const response = await fetch('/api/configured-ward');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setConfiguredWards(data.allWards || []);
+            setIsMultipleWards(data.isMultiple || false);
+            
+            // If only one ward is configured, auto-select it
+            if (!data.isMultiple && data.ward) {
+              setSelectedWard(data.ward);
+            }
+            // If multiple wards, don't auto-select - let user choose
+          } else {
+            setError('Failed to load ward configuration');
+          }
+        } else {
+          setError('Failed to load ward configuration');
+        }
+      } catch (err: any) {
+        console.error('Error fetching configured ward:', err);
+        setError('Failed to load ward configuration');
+      } finally {
+        setLoadingWard(false);
+      }
+    };
+
+    fetchConfiguredWard();
+  }, []);
 
   const handleLanguageSelect = (language: string) => {
     setSelectedLanguage(language);
-    setCurrentStep('ward');
+    
+    // If multiple wards configured, show ward selection
+    if (isMultipleWards && configuredWards.length > 1) {
+      setCurrentStep('ward');
+    } 
+    // If single ward configured, auto-select it and go to ward image
+    else if (!isMultipleWards && configuredWards.length === 1) {
+      setSelectedWard(configuredWards[0]);
+      setCurrentStep('wardImage');
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    } 
+    // If no wards configured, show error
+    else {
+      setError('Ward configuration is loading. Please wait...');
+    }
   };
 
   const handleWardSelect = (ward: string) => {
@@ -130,6 +180,7 @@ export default function VoterSearchForm() {
       });
     }
     
+    // Ward chip - show but don't allow removal (it's configured)
     if (selectedWard) {
       chipArray.push({
         id: 'ward',
@@ -173,11 +224,8 @@ export default function VoterSearchForm() {
         handleReset();
         break;
       case 'ward':
-        setSelectedWard(null);
-        setCurrentStep('ward');
-        setSelectedSearchMethod(null);
-        setMethodSelected(false);
-        setUserInput('');
+        // Ward is configured - don't allow removal, just reset to language selection
+        handleReset();
         break;
       case 'method':
         setSelectedSearchMethod(null);
@@ -201,21 +249,27 @@ export default function VoterSearchForm() {
         <div className="mb-3 sm:mb-4 md:mb-6 lg:mb-8 w-full px-2 sm:px-4 md:px-0">
           <div className="flex items-center justify-center overflow-x-auto pb-2 sm:pb-3 md:pb-2 pt-1 sm:pt-2 md:pt-1 w-full max-w-full scrollbar-hide">
             <div className="flex items-center w-full max-w-2xl">
-              {['language', 'ward', 'method', 'candidates', 'results', 'slip'].map((step, index) => {
-                // Map current step to progress index (wardImage counts as ward completion)
-                const stepIndexMap: { [key: string]: number } = {
-                  'language': 0,
-                  'ward': 1,
-                  'wardImage': 1, // wardImage is part of ward step
-                  'method': 2,
-                  'candidates': 3,
-                  'results': 4,
-                  'slip': 5
-                };
-                const currentStepIndex = stepIndexMap[currentStep] ?? 0;
-                const stepProgressIndex = stepIndexMap[step] ?? 0;
-                const isActive = stepProgressIndex <= currentStepIndex;
-                const isCurrent = stepProgressIndex === currentStepIndex || (step === 'ward' && currentStep === 'wardImage');
+              {(() => {
+                // Show ward step in progress if multiple wards are configured
+                const steps = isMultipleWards 
+                  ? ['language', 'ward', 'method', 'candidates', 'results', 'slip']
+                  : ['language', 'method', 'candidates', 'results', 'slip'];
+                
+                return steps.map((step, index) => {
+                  // Map current step to progress index
+                  const stepIndexMap: { [key: string]: number } = {
+                    'language': 0,
+                    'ward': 1, // Ward selection (only shown if multiple wards)
+                    'wardImage': isMultipleWards ? 1 : 0, // wardImage position depends on whether ward selection is shown
+                    'method': isMultipleWards ? 2 : 1,
+                    'candidates': isMultipleWards ? 3 : 2,
+                    'results': isMultipleWards ? 4 : 3,
+                    'slip': isMultipleWards ? 5 : 4
+                  };
+                  const currentStepIndex = stepIndexMap[currentStep] ?? 0;
+                  const stepProgressIndex = stepIndexMap[step] ?? 0;
+                  const isActive = stepProgressIndex <= currentStepIndex;
+                  const isCurrent = stepProgressIndex === currentStepIndex || (step === 'method' && currentStep === 'wardImage') || (step === 'ward' && currentStep === 'wardImage');
 
                 return (
                   <div key={step} className="flex items-center flex-1">
@@ -230,7 +284,7 @@ export default function VoterSearchForm() {
                         {index + 1}
                       </div>
                     </div>
-                    {index < 5 && (
+                    {index < steps.length - 1 && (
                       <div
                         className={`flex-1 h-0.5 sm:h-1 transition-all mx-1 sm:mx-2 ${
                           isActive ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-200'
@@ -239,7 +293,8 @@ export default function VoterSearchForm() {
                     )}
                   </div>
                 );
-              })}
+                });
+              })()}
             </div>
           </div>
         </div>
@@ -260,13 +315,26 @@ export default function VoterSearchForm() {
             {/* Step 1: Language Selection */}
             {currentStep === 'language' && (
               <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-full" style={{ boxSizing: 'border-box', overflowX: 'hidden' }}>
-                <WelcomeMessage onLanguageSelect={handleLanguageSelect} />
+                {loadingWard ? (
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center gap-2 text-gray-600">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm">Loading configuration...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <WelcomeMessage onLanguageSelect={handleLanguageSelect} />
+                )}
               </div>
             )}
 
-        {/* Step 2: Ward Selection */}
-        {currentStep === 'ward' && selectedLanguage && (
-          <WardSelection onWardSelect={handleWardSelect} language={selectedLanguage} />
+        {/* Step 2: Ward Selection - Show only if multiple wards are configured */}
+        {currentStep === 'ward' && selectedLanguage && isMultipleWards && configuredWards.length > 1 && (
+          <WardSelection 
+            onWardSelect={handleWardSelect} 
+            language={selectedLanguage} 
+            availableWards={configuredWards}
+          />
         )}
 
         {/* Step 2.5: Ward Image Display */}
