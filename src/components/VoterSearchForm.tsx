@@ -69,9 +69,15 @@ export default function VoterSearchForm() {
             if (!isMultiple && data.ward) {
               console.log('Frontend - Auto-selecting ward:', data.ward);
               setSelectedWard(data.ward);
+              // Dispatch custom event to update banner
+              const event = new CustomEvent('wardSelected', { detail: { ward: data.ward } });
+              window.dispatchEvent(event);
             } else if (!isMultiple && allWards.length === 1) {
               console.log('Frontend - Auto-selecting ward from allWards:', allWards[0]);
               setSelectedWard(allWards[0]);
+              // Dispatch custom event to update banner
+              const event = new CustomEvent('wardSelected', { detail: { ward: allWards[0] } });
+              window.dispatchEvent(event);
             }
             // If multiple wards, don't auto-select - let user choose
           } else {
@@ -113,6 +119,9 @@ export default function VoterSearchForm() {
       else if (!currentIsMultiple && currentWards.length === 1) {
         console.log('handleLanguageSelect - Auto-selecting ward:', currentWards[0]);
         setSelectedWard(currentWards[0]);
+        // Dispatch custom event to update banner
+        const event = new CustomEvent('wardSelected', { detail: { ward: currentWards[0] } });
+        window.dispatchEvent(event);
         setCurrentStep('wardImage');
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -137,6 +146,11 @@ export default function VoterSearchForm() {
   const handleWardSelect = (ward: string) => {
     setSelectedWard(ward);
     setCurrentStep('wardImage');
+    
+    // Dispatch custom event to update banner
+    const event = new CustomEvent('wardSelected', { detail: { ward } });
+    window.dispatchEvent(event);
+    
     // Scroll to top when ward is selected
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
