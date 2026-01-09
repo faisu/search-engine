@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         { label: 'नाव:', value: voterDetails.name || 'N/A' },
         { label: 'EPIC क्रमांक:', value: voterDetails.epic || 'N/A' },
         { label: 'वय:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'SR क्र.:', value: `${srNo || 'N/A'} | भाग क्र.: ${voterDetails.partBooth || 'N/A'} | प्रभाग: ${ward || 'N/A'}` },
+        { label: 'प्रभाग नं:', value: `${ward || 'N/A'} | SR नं: ${srNo || 'N/A'} | भाग नं: ${voterDetails.partBooth || 'N/A'}` },
         { label: 'मतदान केंद्र:', value: pollingStation },
         { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
       ];
@@ -56,15 +56,15 @@ export async function POST(request: NextRequest) {
         { label: 'नाम:', value: voterDetails.name || 'N/A' },
         { label: 'EPIC नंबर:', value: voterDetails.epic || 'N/A' },
         { label: 'आयु:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'SR नं.:', value: `${srNo || 'N/A'} | भाग नं.: ${voterDetails.partBooth || 'N/A'} | वार्ड: ${ward || 'N/A'}` },
+        { label: 'वार्ड नं:', value: `${ward || 'N/A'} | SR नं: ${srNo || 'N/A'} | भाग नं: ${voterDetails.partBooth || 'N/A'}` },
         { label: 'मतदान केंद्र:', value: pollingStation },
         { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
       ];
     } else { // English
       rows = [
         { label: 'Name:', value: `${voterDetails.name || 'N/A'} | Age: ${voterDetails.age || 'N/A'} | Gender: ${voterDetails.gender || 'N/A'}` },
-        { label: 'EPIC No.:', value: voterDetails.epic || 'N/A' },
-        { label: 'SR No.:', value: `${srNo || 'N/A'} | Part No.: ${voterDetails.partBooth || 'N/A'} | Ward: ${ward || 'N/A'}` },
+        { label: 'EPIC No:', value: voterDetails.epic || 'N/A' },
+        { label: 'Ward No:', value: `${ward || 'N/A'} | SR No: ${srNo || 'N/A'} | Part No: ${voterDetails.partBooth || 'N/A'}` },
         { label: 'Polling Station:', value: pollingStation },
         { label: 'Polling Station Address:', value: pollingStationAddress },
       ];
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
     const addressRightPadding = 250; // No right padding for any field
-    const y = [141, 144, 145, 147].includes(parseInt(wardForPath)) ? 380 : 340;
+    const y = [141, 144, 145, 147].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
 
     let currentY = y;
     rows.forEach(({ label, value }) => {
