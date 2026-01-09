@@ -29,9 +29,21 @@ const getWardConfig = (wardSet: string | null): string | null => {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get ward set from URL parameter (e.g., ?wardSet=165 or ?set=165)
+    // Get ward set from URL parameter (e.g., ?wardSet=165, ?wardset=165, ?set=165, or ?ward=165)
+    // Check all possible parameter name variations (case-insensitive)
     const searchParams = request.nextUrl.searchParams;
-    const wardSet = searchParams.get('wardSet') || searchParams.get('set') || searchParams.get('ward');
+    
+    // Get all possible parameter names (case variations)
+    const wardSet = searchParams.get('wardSet') || 
+                     searchParams.get('wardset') || 
+                     searchParams.get('WardSet') || 
+                     searchParams.get('WARDSET') ||
+                     searchParams.get('set') || 
+                     searchParams.get('ward');
+    
+    // Debug logging (remove in production if needed)
+    console.log('API - wardSet parameter:', wardSet);
+    console.log('API - all search params:', Object.fromEntries(searchParams.entries()));
     
     // Try to get ward config from URL parameter
     let configuredWard = getWardConfig(wardSet);
@@ -77,6 +89,7 @@ export async function GET(request: NextRequest) {
       allWards: wards, // All configured wards
       isMultiple: wards.length > 1, // Flag to indicate if multiple wards are configured
       wardSet: wardSet, // Return which ward set was used
+      configuredWard: configuredWard, // Debug: show which config was selected
     });
   } catch (error: any) {
     console.error('Error getting configured ward:', error);

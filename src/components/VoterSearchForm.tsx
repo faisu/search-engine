@@ -29,14 +29,26 @@ export default function VoterSearchForm() {
   useEffect(() => {
     const fetchConfiguredWard = async () => {
       try {
-        // Get wardSet from URL parameter (e.g., ?wardSet=165, ?set=165, or ?ward=165)
+        // Get wardSet from URL parameter (e.g., ?wardSet=165, ?wardset=165, ?set=165, or ?ward=165)
+        // Check all possible parameter name variations (case-insensitive)
         const urlParams = new URLSearchParams(window.location.search);
-        const wardSet = urlParams.get('wardSet') || urlParams.get('set') || urlParams.get('ward');
+        const wardSet = urlParams.get('wardSet') || 
+                        urlParams.get('wardset') || 
+                        urlParams.get('WardSet') || 
+                        urlParams.get('WARDSET') ||
+                        urlParams.get('set') || 
+                        urlParams.get('ward');
+        
+        // Debug logging
+        console.log('Frontend - URL search:', window.location.search);
+        console.log('Frontend - wardSet value:', wardSet);
         
         // Build API URL with parameter if present
-        const apiUrl = wardSet 
+        const apiUrl = wardSet
           ? `/api/configured-ward?wardSet=${encodeURIComponent(wardSet)}`
           : '/api/configured-ward';
+        
+        console.log('Frontend - API URL:', apiUrl);
         
         const response = await fetch(apiUrl);
         if (response.ok) {
@@ -72,7 +84,7 @@ export default function VoterSearchForm() {
     
     // If multiple wards configured, show ward selection
     if (isMultipleWards && configuredWards.length > 1) {
-      setCurrentStep('ward');
+    setCurrentStep('ward');
     } 
     // If single ward configured, auto-select it and go to ward image
     else if (!isMultipleWards && configuredWards.length === 1) {
@@ -266,18 +278,18 @@ export default function VoterSearchForm() {
                 
                 return steps.map((step, index) => {
                   // Map current step to progress index
-                  const stepIndexMap: { [key: string]: number } = {
-                    'language': 0,
+                const stepIndexMap: { [key: string]: number } = {
+                  'language': 0,
                     'ward': 1, // Ward selection (only shown if multiple wards)
                     'wardImage': isMultipleWards ? 1 : 0, // wardImage position depends on whether ward selection is shown
                     'method': isMultipleWards ? 2 : 1,
                     'candidates': isMultipleWards ? 3 : 2,
                     'results': isMultipleWards ? 4 : 3,
                     'slip': isMultipleWards ? 5 : 4
-                  };
-                  const currentStepIndex = stepIndexMap[currentStep] ?? 0;
-                  const stepProgressIndex = stepIndexMap[step] ?? 0;
-                  const isActive = stepProgressIndex <= currentStepIndex;
+                };
+                const currentStepIndex = stepIndexMap[currentStep] ?? 0;
+                const stepProgressIndex = stepIndexMap[step] ?? 0;
+                const isActive = stepProgressIndex <= currentStepIndex;
                   const isCurrent = stepProgressIndex === currentStepIndex || (step === 'method' && currentStep === 'wardImage') || (step === 'ward' && currentStep === 'wardImage');
 
                 return (
@@ -332,7 +344,7 @@ export default function VoterSearchForm() {
                     </div>
                   </div>
                 ) : (
-                  <WelcomeMessage onLanguageSelect={handleLanguageSelect} />
+                <WelcomeMessage onLanguageSelect={handleLanguageSelect} />
                 )}
               </div>
             )}
