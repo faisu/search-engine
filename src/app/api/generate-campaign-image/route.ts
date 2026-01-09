@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
     const addressRightPadding = 250; // No right padding for any field
-    const y = [141, 144, 145, 147].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
+    const y = [141, 144, 145, 147,140].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
 
     let currentY = y;
     rows.forEach(({ label, value }) => {
