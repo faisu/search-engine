@@ -35,8 +35,8 @@ const getCandidateForWard = (ward: string): Candidate | null => {
     '143': { serialNo: 3, name: 'कु. रचना गवस' },
     '144': { serialNo: 1, name: 'दिलीप पाटील' },
     '165': { serialNo: 5, name: 'अब्दुल रशीद (कप्तान) मलिक' },
-    '168': { serialNo: 1, name: 'डॉ. सईदा खान' },
-    '170': { serialNo: 1, name: 'बुशरा नदीम (कप्तान) मलिक' },
+    '168': { serialNo: 2, name: 'डॉ. सईदा खान' },
+    '170': { serialNo: 3, name: 'बुशरा नदीम (कप्तान) मलिक' },
   };
 
   const candidateData = wardToCandidateMap[ward];
