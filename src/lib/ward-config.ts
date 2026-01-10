@@ -32,21 +32,30 @@ export function getWardConfigFromRequest(request: NextRequest): string {
       }
     }
     
-    // Fallback to hostname detection
+    // Fallback to hostname detection (only for domain names, not IP addresses)
     const hostname = request.headers.get('host') || request.headers.get('x-forwarded-host');
     if (hostname) {
       const host = hostname.split(':')[0].toLowerCase();
-      if (host.includes('165') || host.includes('ward-165') || host.includes('ward165')) {
-        return process.env.WARD_SET_165 || '165';
-      }
-      if (host.includes('170') || host.includes('ward-170') || host.includes('ward170')) {
-        return process.env.WARD_SET_170 || '170';
-      }
-      if (host.includes('168') || host.includes('ward-168') || host.includes('ward168')) {
-        return process.env.WARD_SET_168 || '168';
-      }
-      if (host.includes('multiple') || host.includes('all') || host.includes('voters')) {
-        return process.env.WARD_SET_MULTIPLE || '140,141,143,144,145,146,147,148';
+      
+      // Skip IP addresses - only check domain names
+      // IP addresses look like: 192.168.1.148 (numbers and dots only)
+      const isIPAddress = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+      
+      if (!isIPAddress) {
+        // Only check for specific ward patterns in domain names
+        // Check for patterns like: ward-165, ward165, 165-ward, etc. (not just "165" anywhere)
+        if (/\bward-165\b|\bward165\b|^165-|^165\./.test(host)) {
+          return process.env.WARD_SET_165 || '165';
+        }
+        if (/\bward-170\b|\bward170\b|^170-|^170\./.test(host)) {
+          return process.env.WARD_SET_170 || '170';
+        }
+        if (/\bward-168\b|\bward168\b|^168-|^168\./.test(host)) {
+          return process.env.WARD_SET_168 || '168';
+        }
+        if (/\bmultiple\b|\ball\b|\bvoters\b/.test(host)) {
+          return process.env.WARD_SET_MULTIPLE || '140,141,143,144,145,146,147,148';
+        }
       }
     }
     

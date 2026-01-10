@@ -239,6 +239,9 @@ export default function VoterSearchForm() {
     setShowSlip(false);
     setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Dispatch event to reset banner to default campaign-image.jpg
+    const event = new CustomEvent('wardSelected', { detail: { ward: null } });
+    window.dispatchEvent(event);
   };
 
   // Build chips array from form state
@@ -304,8 +307,36 @@ export default function VoterSearchForm() {
         handleReset();
         break;
       case 'ward':
-        // Ward is configured - don't allow removal, just reset to language selection
-        handleReset();
+        // When ward chip is clicked, go back to ward selection/ward image step
+        // Reset search-related state when going back
+        setSelectedSearchMethod(null);
+        setMethodSelected(false);
+        setUserInput('');
+        setVoterDetails(null);
+        setShowSlip(false);
+        setError(null);
+        
+        // Go back to ward selection step based on configuration
+        if (isMultipleWards && configuredWards.length > 1) {
+          // Multiple wards: clear ward selection and go back to ward selection step
+          setSelectedWard(null);
+          // Dispatch event to reset banner to default campaign-image.jpg
+          const resetEvent = new CustomEvent('wardSelected', { detail: { ward: null } });
+          window.dispatchEvent(resetEvent);
+          setCurrentStep('ward');
+        } else if (!isMultipleWards && configuredWards.length === 1) {
+          // Single ward: keep the ward selected, just go back to ward image step
+          // Ward chip wouldn't be shown if selectedWard is null, so we know it's set
+          // No need to clear selectedWard or reset banner, just navigate back
+          setCurrentStep('wardImage');
+        } else {
+          // Fallback: reset entirely if configuration is unclear
+          setSelectedWard(null);
+          const resetEvent = new CustomEvent('wardSelected', { detail: { ward: null } });
+          window.dispatchEvent(resetEvent);
+          handleReset();
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         break;
       case 'method':
         setSelectedSearchMethod(null);

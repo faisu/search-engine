@@ -49,8 +49,8 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
     '147': '/Slips/147.jpg',
     '148': '/Slips/148.jpg',
     '165': '/Slips/165.jpg',
-    '166': '/Slips/168.jpg',
-    '167': '/Slips/170.jpg',
+    '168': '/Slips/168.jpg',
+    '170': '/Slips/170.jpg',
   };
 
   // Get the image for the selected ward, or use a default

@@ -59,14 +59,25 @@ export default function SelectedDataChips({ chips, onRemove, language }: Selecte
         {chips.map((chip) => (
           <div
             key={chip.id}
-            className="inline-flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:shadow-md transition-all group"
+            onClick={() => {
+              // For ward chip, clicking anywhere on the chip should go back to ward selection
+              if (chip.type === 'ward') {
+                onRemove(chip.id, chip.type);
+              }
+            }}
+            className={`inline-flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:shadow-md transition-all group ${
+              chip.type === 'ward' ? 'cursor-pointer' : ''
+            }`}
           >
             <span className={`text-xs sm:text-sm font-semibold text-blue-700 ${language === '1' || language === '2' ? 'font-devanagari' : ''}`}>
               <span className="text-gray-600">{getTypeLabel(chip.type)}:</span>{' '}
               <span className="text-blue-800">{chip.value}</span>
             </span>
             <button
-              onClick={() => onRemove(chip.id, chip.type)}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the chip's onClick when clicking X
+                onRemove(chip.id, chip.type);
+              }}
               className="ml-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 flex items-center justify-center transition-all flex-shrink-0 group-hover:scale-110"
               aria-label={language === '1' ? 'काढा' : language === '2' ? 'हटाएं' : 'Remove'}
             >
