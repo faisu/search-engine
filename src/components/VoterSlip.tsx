@@ -128,6 +128,23 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
     }
   };
 
+  // Get phone number based on ward
+  const getPhoneNumberByWard = (ward: string): string => {
+    const wardNum = String(ward).trim();
+    
+    // Specific ward phone numbers
+    if (wardNum === '165') {
+      return '+919152431887';
+    } else if (wardNum === '168') {
+      return '+919893219983';
+    } else if (wardNum === '170') {
+      return '+918879518213';
+    }
+    
+    // Default for wards 140-148 and any other wards
+    return '+919893229983';
+  };
+
   const handleShareOnWhatsApp = () => {
     // Format message based on language
     let message = '';
@@ -143,11 +160,9 @@ export default function VoterSlip({ language, voterDetails }: VoterSlipProps) {
     // Encode message for URL
     const encodedMessage = encodeURIComponent(message);
     
-    // Open WhatsApp - user can choose recipient
-    // To send to specific number, use: const phoneNumber = '919876543210';
-    const phoneNumber = '+919893229983';
+    // Get phone number based on selected ward
+    const phoneNumber = getPhoneNumberByWard(voterDetails.ward);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    // const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
 
