@@ -13,31 +13,47 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Scroll to top of the page when component first appears
-    const scrollToTop = () => {
-      // Small delay to ensure component is fully rendered
-      setTimeout(() => {
-        // Scroll to the top of the page
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
+    // Scroll to show the Continue button when component first appears
+    // Wait a bit to ensure component is fully rendered
+    const timeoutId = setTimeout(() => {
+      if (buttonRef.current) {
+        // Scroll the button into view, centered in viewport so user can scroll up to see content above
+        buttonRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center', // Shows button in center of viewport, allowing scrolling up to see title/image above
+          inline: 'nearest'
         });
-        
-        // Also ensure the component container is at the top
-        if (containerRef.current) {
-          containerRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest'
-          });
-        }
-      }, 50);
-    };
+      } else if (containerRef.current) {
+        // Fallback: scroll to container if button not available yet
+        containerRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 200); // Delay to ensure DOM is ready
 
-    scrollToTop();
+    return () => clearTimeout(timeoutId);
   }, []);
+
+  // Also scroll when image loads (in case layout changes)
+  useEffect(() => {
+    if (isImageLoaded && buttonRef.current) {
+      // Small delay after image loads to ensure layout is stable
+      const timeoutId = setTimeout(() => {
+        buttonRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isImageLoaded]);
   // Mapping of ward numbers to slip images
   const wardToImageMap: { [key: string]: string } = {
     '140': '/Slips/140.jpg',
@@ -127,6 +143,7 @@ export default function WardImageDisplay({ ward, language, onContinue }: WardIma
       {/* Continue Button */}
       <div className="flex justify-center mt-4">
         <button
+          ref={buttonRef}
           onClick={onContinue}
           disabled={!isImageLoaded}
           className={`bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] ${

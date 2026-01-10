@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import EVMBallotUnit from './EVMBallotUnit';
 
 interface Candidate {
@@ -30,11 +31,11 @@ const getCandidateForWard = (ward: string): Candidate | null => {
     // 148: from slip image
     '148': { serialNo: 2, name: 'सोमू चंद पवार' },
     // Other wards currently default to party name at serial no 3
-    '141': { serialNo: 5, name: 'डॉन चंदू' },
+    '141': { serialNo: 5, name: 'सौरभ गुलाब साठे' },
     '143': { serialNo: 3, name: 'कु. रचना गवस' },
     '144': { serialNo: 1, name: 'दिलीप पाटील' },
     '165': { serialNo: 5, name: 'अब्दुल रशीद (कप्तान) मलिक' },
-    '168': { serialNo: 1, name: 'डॉन चंदू' },
+    '168': { serialNo: 1, name: 'डॉ. सईदा खान' },
     '170': { serialNo: 1, name: 'बुशरा नदीम (कप्तान) मलिक' },
   };
 
@@ -52,12 +53,30 @@ const getCandidateForWard = (ward: string): Candidate | null => {
 };
 
 export default function CandidateList({ ward, language, onContinue }: CandidateListProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const candidate = getCandidateForWard(ward);
   
   if (!candidate) {
     // If no candidate found for ward, show error or skip
     return null;
   }
+
+  useEffect(() => {
+    // Scroll to show the Continue button when component first appears
+    // Wait a bit to ensure component is fully rendered
+    const timeoutId = setTimeout(() => {
+      if (buttonRef.current) {
+        // Scroll the button into view, centered in viewport so user can scroll up to see content above
+        buttonRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center', // Shows button in center of viewport, allowing scrolling up to see EVM above
+          inline: 'nearest'
+        });
+      }
+    }, 300); // Slightly longer delay to ensure EVM is rendered
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const translations: { [key: string]: { heading: string; columns: { serialNo: string; name: string; photo: string; symbol: string; button: string }; continueButton: string } } = {
     '1': {
@@ -113,6 +132,7 @@ export default function CandidateList({ ward, language, onContinue }: CandidateL
       {/* Continue Button */}
       <div className="flex justify-center mt-4">
         <button
+          ref={buttonRef}
           onClick={onContinue}
           className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base"
         >

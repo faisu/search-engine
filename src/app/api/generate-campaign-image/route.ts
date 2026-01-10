@@ -32,42 +32,91 @@ export async function POST(request: NextRequest) {
       voterDetails?.serialNo ??
       null;
 
+    // Helper function to convert text to title case (first letter capital, rest lowercase)
+    const toTitleCase = (text: string): string => {
+      if (!text || text === 'N/A') return text;
+      
+      // Split by spaces and process each word
+      return text
+        .split(' ')
+        .map(word => {
+          if (!word) return word;
+          // Capitalize first letter, lowercase rest
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+    };
+
+    // Helper function to format value with title case, preserving labels and separators
+    const formatValue = (value: string): string => {
+      if (!value || value === 'N/A') return value;
+      
+      // Handle values with separators "|"
+      if (value.includes('|')) {
+        return value
+          .split('|')
+          .map(segment => {
+            const trimmed = segment.trim();
+            // If segment has embedded label (contains ":"), preserve label and format value
+            if (trimmed.includes(':')) {
+              const colonIndex = trimmed.indexOf(':');
+              const label = trimmed.substring(0, colonIndex + 1).trim();
+              const val = trimmed.substring(colonIndex + 1).trim();
+              // Format the value part only if it's not numeric and not 'N/A', keep label as is
+              if (val === 'N/A' || !isNaN(Number(val))) {
+                return `${label} ${val}`.trim();
+              }
+              return `${label} ${toTitleCase(val)}`.trim();
+            }
+            // Check if segment is numeric or 'N/A', don't format those
+            if (trimmed === 'N/A' || !isNaN(Number(trimmed))) {
+              return trimmed;
+            }
+            // Format the entire segment
+            return toTitleCase(trimmed);
+          })
+          .join(' | ');
+      }
+      
+      // Simple value without separators - check if numeric
+      if (value === 'N/A' || !isNaN(Number(value.trim()))) {
+        return value;
+      }
+      
+      return toTitleCase(value);
+    };
+
     // Generate structured rows (label + value) based on language
     let rows: { label: string; value: string }[] = [];
     
-    // voterDetails.pollingAddress ='Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu'
-    const pollingStation = voterDetails.pollingStation && voterDetails.pollingStation.length > 50
-      ? voterDetails.pollingStation.substring(0, 50) 
-      : (voterDetails.pollingStation || 'N/A');
-    const pollingStationAddress = voterDetails.pollingAddress && voterDetails.pollingAddress.length > 100
-      ? voterDetails.pollingAddress.substring(0, 100)
-      : (voterDetails.pollingAddress || 'N/A');
+    // voterDetails.pollingAddress ='Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu Hollo don chandu don chandu Hollo don chandu Hollo don chandu chandu Hollo don chandu don chandu Hollo don chandu Hollo don '
+
     
     if (language === '1') { // Marathi
       rows = [
-        { label: 'नाव:', value: voterDetails.name || 'N/A' },
+        { label: 'नाव:', value: formatValue(voterDetails.name || 'N/A') },
         { label: 'EPIC क्रमांक:', value: voterDetails.epic || 'N/A' },
-        { label: 'वय:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'प्रभाग नं:', value: `${ward || 'N/A'} | SR नं: ${srNo || 'N/A'} | भाग नं: ${voterDetails.partBooth || 'N/A'}` },
-        { label: 'मतदान केंद्र:', value: pollingStation },
-        { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
+        { label: 'वय:', value: formatValue(`${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}`) },
+        { label: 'वार्ड नं:', value: formatValue(`${ward || 'N/A'} | बूथ क्रमांक: ${voterDetails.partBooth || 'N/A'} | क्र.संख्या: ${srNo || 'N/A'}`) },
+        { label: 'मतदान केंद्र:', value: formatValue(voterDetails.pollingStation || 'N/A') },
+        { label: 'मतदान केंद्र पत्ता:', value: formatValue(voterDetails.pollingAddress || 'N/A') },
       ];
     } else if (language === '2') { // Hindi
       rows = [
-        { label: 'नाम:', value: voterDetails.name || 'N/A' },
+        { label: 'नाम:', value: formatValue(voterDetails.name || 'N/A') },
         { label: 'EPIC नंबर:', value: voterDetails.epic || 'N/A' },
-        { label: 'आयु:', value: `${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}` },
-        { label: 'वार्ड नं:', value: `${ward || 'N/A'} | SR नं: ${srNo || 'N/A'} | भाग नं: ${voterDetails.partBooth || 'N/A'}` },
-        { label: 'मतदान केंद्र:', value: pollingStation },
-        { label: 'मतदान केंद्र पत्ता:', value: pollingStationAddress },
+        { label: 'आयु:', value: formatValue(`${voterDetails.age || 'N/A'} | लिंग: ${voterDetails.gender || 'N/A'}`) },
+        { label: 'वार्ड नं:', value: formatValue(`${ward || 'N/A'} | भाग नं: ${voterDetails.partBooth || 'N/A'} | SR नं: ${srNo || 'N/A'}`) },
+        { label: 'मतदान केंद्र:', value: formatValue(voterDetails.pollingStation || 'N/A') },
+        { label: 'मतदान केंद्र पत्ता:', value: formatValue(voterDetails.pollingAddress || 'N/A') },
       ];
     } else { // English
       rows = [
-        { label: 'Name:', value: `${voterDetails.name || 'N/A'} | Age: ${voterDetails.age || 'N/A'} | Gender: ${voterDetails.gender || 'N/A'}` },
+        { label: 'Name:', value: formatValue(`${voterDetails.name || 'N/A'} | Age: ${voterDetails.age || 'N/A'} | Gender: ${voterDetails.gender || 'N/A'}`) },
         { label: 'EPIC No:', value: voterDetails.epic || 'N/A' },
-        { label: 'Ward No:', value: `${ward || 'N/A'} | SR No: ${srNo || 'N/A'} | Part No: ${voterDetails.partBooth || 'N/A'}` },
-        { label: 'Polling Station:', value: pollingStation },
-        { label: 'Polling Station Address:', value: pollingStationAddress },
+        { label: 'Ward No:', value: formatValue(`${ward || 'N/A'} | Booth No: ${voterDetails.partBooth || 'N/A'}  | Sr No: ${srNo || 'N/A'} `) },
+        { label: 'Polling Station:', value: formatValue(voterDetails.pollingStation || 'N/A') },
+        { label: 'Polling Station Address:', value: formatValue(voterDetails.pollingAddress || 'N/A') },
       ];
     }
 
@@ -116,7 +165,7 @@ export async function POST(request: NextRequest) {
         : 'Roboto';
 
     // Load ward-specific template image from public/final_slip folder
-    const templatePath = path.join(process.cwd(), 'public', 'final_slip', `${wardForPath}.jpeg`);
+    const templatePath = path.join(process.cwd(), 'public', 'final_slip', `${wardForPath}.jpg`);
     
     if (!fs.existsSync(templatePath)) {
       return NextResponse.json(
@@ -142,10 +191,10 @@ export async function POST(request: NextRequest) {
     // Draw template image
     ctx.drawImage(templateImage, 0, 0);
 
-    const fontSize = 28; // Increased font size
+    const fontSize = 36; // Increased font size
     const fontColor = '#000000';
-    const lineHeight = fontSize * 1.5; // Keep original spacing
-    const maxWidth = 850;
+    const lineHeight = fontSize * 2; // Keep original spacing
+    const maxWidth = 1800;
     
     // Get font family based on language
     const fontFamily = getFontFamily(language);
@@ -154,12 +203,12 @@ export async function POST(request: NextRequest) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    const labelX = 50;
-    const valueX = 50;
+    const labelX = 200;
+    const valueX = 200;
     const spacingBetweenLabelAndValue = 0;
     const linePaddingOffsets = [0, 0, 0];
-    const addressRightPadding = 250; // No right padding for any field
-    const y = [141, 144, 145, 147,140,165,168,170].includes(parseInt(wardForPath)) ? 380 : 290; // Reduced top padding
+    const addressRightPadding = 650; // No right padding for any field
+    const y = 510 ; // Reduced top padding
 
     let currentY = y;
     rows.forEach(({ label, value }) => {

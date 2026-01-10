@@ -115,14 +115,21 @@ export default function VoterSearchForm() {
         console.log('handleLanguageSelect - Showing ward selection');
         setCurrentStep('ward');
       } 
-      // If single ward configured, auto-select it and go to ward image
+      // If single ward configured, auto-select it and go to ward image or method (skip wardImage for 141, 168, 170)
       else if (!currentIsMultiple && currentWards.length === 1) {
         console.log('handleLanguageSelect - Auto-selecting ward:', currentWards[0]);
-        setSelectedWard(currentWards[0]);
+        const selectedWardValue = currentWards[0];
+        setSelectedWard(selectedWardValue);
         // Dispatch custom event to update banner
-        const event = new CustomEvent('wardSelected', { detail: { ward: currentWards[0] } });
+        const event = new CustomEvent('wardSelected', { detail: { ward: selectedWardValue } });
         window.dispatchEvent(event);
-        setCurrentStep('wardImage');
+        // Skip wardImage step for wards 141, 168 and 170
+        const wardsToSkipImage = ['141', '168', '170'];
+        if (wardsToSkipImage.includes(selectedWardValue)) {
+          setCurrentStep('method');
+        } else {
+          setCurrentStep('wardImage');
+        }
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
@@ -145,11 +152,18 @@ export default function VoterSearchForm() {
 
   const handleWardSelect = (ward: string) => {
     setSelectedWard(ward);
-    setCurrentStep('wardImage');
     
     // Dispatch custom event to update banner
     const event = new CustomEvent('wardSelected', { detail: { ward } });
     window.dispatchEvent(event);
+    
+    // Skip wardImage step for wards 141, 168 and 170
+    const wardsToSkipImage = ['141', '168', '170'];
+    if (wardsToSkipImage.includes(ward)) {
+      setCurrentStep('method');
+    } else {
+      setCurrentStep('wardImage');
+    }
     
     // Scroll to top when ward is selected
     setTimeout(() => {
@@ -325,10 +339,16 @@ export default function VoterSearchForm() {
           window.dispatchEvent(resetEvent);
           setCurrentStep('ward');
         } else if (!isMultipleWards && configuredWards.length === 1) {
-          // Single ward: keep the ward selected, just go back to ward image step
+          // Single ward: keep the ward selected, just go back to ward image step or method (skip wardImage for 141, 168, 170)
           // Ward chip wouldn't be shown if selectedWard is null, so we know it's set
           // No need to clear selectedWard or reset banner, just navigate back
-          setCurrentStep('wardImage');
+          const wardsToSkipImage = ['141', '168', '170'];
+          const currentWard = selectedWard || configuredWards[0];
+          if (currentWard && wardsToSkipImage.includes(currentWard)) {
+            setCurrentStep('method');
+          } else {
+            setCurrentStep('wardImage');
+          }
         } else {
           // Fallback: reset entirely if configuration is unclear
           setSelectedWard(null);
@@ -448,8 +468,8 @@ export default function VoterSearchForm() {
           />
         )}
 
-        {/* Step 2.5: Ward Image Display */}
-        {currentStep === 'wardImage' && selectedLanguage && selectedWard && (
+        {/* Step 2.5: Ward Image Display - Skip for wards 141, 168 and 170 */}
+        {currentStep === 'wardImage' && selectedLanguage && selectedWard && !['141', '168', '170'].includes(selectedWard) && (
           <WardImageDisplay ward={selectedWard} language={selectedLanguage} onContinue={handleWardImageContinue} />
         )}
 
