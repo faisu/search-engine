@@ -48,7 +48,7 @@ const getCandidateForWard = (ward: string): Candidate | null => {
     name: candidateData.name,
     symbol: 'Clock',
     symbolIcon: '🕐',
-    photo: '/Screenshot 2026-01-06 at 11.19.09 AM.png', // Candidate photo
+    photo: `/evm_images/${ward}.png`, // Candidate photo from evm_images folder
   };
 };
 

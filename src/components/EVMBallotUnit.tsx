@@ -121,47 +121,75 @@ export default function EVMBallotUnit({ ward = '140', language = '1', candidateS
 
           {/* EVM Content Area - 6 Rows Like Real EVM */}
           <div className="bg-white rounded border border-gray-400 sm:border-2 shadow-inner p-2 sm:p-3 md:p-4">
-            <div className="grid grid-cols-12 gap-1.5 sm:gap-2 md:gap-2.5">
+            <div className="flex">
               {/* Left Section - 6 Candidate Slots */}
-              <div className="col-span-10 space-y-1 sm:space-y-1.5">
+              <div className="flex-1 space-y-1 sm:space-y-1.5">
                 {candidates.map((serialNo) => (
                   <div
                     key={serialNo}
                     className={`
-                      bg-gray-100 border border-gray-300 sm:border-2 rounded 
-                      p-1.5 sm:p-2 md:p-2.5 
                       ${serialNo === ourCandidateSerialNo ? 'h-[56px] sm:h-[64px] md:h-[72px]' : 'h-[36px] sm:h-[40px] md:h-[48px]'}
                       flex items-center gap-1.5 sm:gap-2 md:gap-3
-                      ${selectedCandidate === serialNo ? 'border-blue-500 bg-blue-50 shadow-md' : ''}
-                      ${serialNo === ourCandidateSerialNo ? 'ring-1 sm:ring-2 ring-yellow-400 bg-yellow-50/50 moving-highlight border-yellow-400' : ''}
+                      ${selectedCandidate === serialNo ? 'border-blue-500 bg-blue-50 shadow-md rounded p-1.5 sm:p-2 md:p-2.5 border-2' : ''}
                       transition-all
                     `}
                   >
-                    {/* Serial Number - Always visible */}
-                    <span className={`${serialNo === ourCandidateSerialNo ? 'text-sm sm:text-base md:text-lg' : 'text-xs sm:text-sm md:text-base'} font-bold text-gray-700 flex-shrink-0 w-5 sm:w-6 md:w-8 text-center`}>
-                      {serialNo}
-                    </span>
+                    {/* Serial Number - Show box for our candidate, simple number for others */}
+                    {serialNo === ourCandidateSerialNo ? (
+                      /* Serial Number Box with "अक्र" label */
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-300 p-0.5 sm:p-1 md:p-1.5 flex flex-col items-center justify-center min-w-[40px] sm:min-w-[50px] md:min-w-[60px] flex-shrink-0">
+                        <span className={`text-[7px] sm:text-[9px] md:text-[10px] text-gray-600 font-semibold mb-0.5 ${language === '1' || language === '2' ? 'font-devanagari' : ''}`}>
+                          अक्र
+                        </span>
+                        <span className="text-sm sm:text-base md:text-lg font-bold text-gray-800">
+                          {serialNo}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={`text-xs sm:text-sm md:text-base font-bold text-gray-700 flex-shrink-0 w-5 sm:w-6 md:w-8 text-center`}>
+                        {serialNo}
+                      </span>
+                    )}
                     
                     {/* Candidate Symbol - Only show for our candidate */}
                     {serialNo === ourCandidateSerialNo ? (
                       <>
-                        {/* Party Logo */}
-                        <div className="flex-shrink-0 flex items-center">
-                          <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14">
-                            <Image
-                              src="/download.png"
-                              alt="NCP Logo"
-                              fill
-                              className="object-contain"
-                              sizes="(max-width: 640px) 32px, (max-width: 768px) 40px, (max-width: 1024px) 48px, 56px"
-                            />
+                        {/* Campaign Banner Style Layout */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-1 min-w-0">
+                          {/* Candidate Name Box */}
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-300 p-0.5 sm:p-1 md:p-1.5 flex items-center min-h-[40px] sm:min-h-[50px] md:min-h-[60px] flex-1 min-w-0">
+                            <span className={`text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-bold text-gray-900 whitespace-nowrap pl-1 sm:pl-1.5 md:pl-2 ${language === '1' || language === '2' ? 'font-devanagari' : ''}`}>
+                              {displayCandidateName}
+                            </span>
                           </div>
-                        </div>
-                        {/* Candidate Name - Only show for our candidate */}
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs sm:text-sm md:text-base lg:text-lg xl:text-2xl text-gray-900 font-black truncate ${language === '1' || language === '2' ? 'font-devanagari' : ''}`}>
-                            {displayCandidateName}
-                          </p>
+                          
+                          {/* Candidate Photo */}
+                          {candidatePhoto && (
+                            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-300 p-0.5 overflow-hidden w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] md:w-[60px] md:h-[60px] flex-shrink-0">
+                              <div className="relative w-full h-full rounded-md overflow-hidden">
+                                <Image
+                                  src={candidatePhoto}
+                                  alt={displayCandidateName}
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 640px) 40px, (max-width: 768px) 50px, 60px"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Election Symbol - Clock */}
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-300 p-0.5 flex items-center justify-center w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] md:w-[60px] md:h-[60px] flex-shrink-0">
+                            <div className="relative w-full h-full flex items-center justify-center">
+                              <Image
+                                src="/logo.png"
+                                alt="Clock Symbol"
+                                fill
+                                className="object-contain"
+                                sizes="(max-width: 640px) 40px, (max-width: 768px) 50px, 60px"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </>
                     ) : (
@@ -175,74 +203,33 @@ export default function EVMBallotUnit({ ward = '140', language = '1', candidateS
               </div>
 
               {/* Right Section - 6 Voting Buttons with Indicator Lights */}
-              <div className="col-span-2 space-y-1 sm:space-y-1.5">
+              <div className="flex-shrink-0 space-y-1 sm:space-y-1.5 flex flex-col items-end pl-1 sm:pl-1.5 md:pl-2">
                 {candidates.map((serialNo) => (
                   <div
                     key={serialNo}
-                    className={`flex items-center gap-1 sm:gap-1.5 md:gap-2 ${serialNo === ourCandidateSerialNo ? 'h-[56px] sm:h-[64px] md:h-[72px]' : 'h-[36px] sm:h-[40px] md:h-[48px]'}`}
+                    className={`flex items-center justify-end gap-0.5 sm:gap-1 ${serialNo === ourCandidateSerialNo ? 'h-[56px] sm:h-[64px] md:h-[72px]' : 'h-[36px] sm:h-[40px] md:h-[48px]'}`}
                   >
-                    {/* Red Indicator Light */}
+                    {/* Red Dot */}
                     <div className="flex-shrink-0">
                       <div
                         className={`
-                          ${serialNo === ourCandidateSerialNo ? 'w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-red-500 blink-red-light shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-gray-300'} rounded-full 
-                          border border-gray-400
-                          ${selectedCandidate === serialNo ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] sm:shadow-[0_0_12px_rgba(239,68,68,1)]' : ''}
+                          w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5 rounded-full
+                          ${serialNo === ourCandidateSerialNo ? 'bg-red-500 blink-red-light shadow-[0_0_3px_rgba(239,68,68,0.8)]' : selectedCandidate === serialNo ? 'bg-red-500 blink-red-light shadow-[0_0_3px_rgba(239,68,68,0.8)]' : 'bg-gray-300'}
                           transition-all duration-200
                         `}
                       />
                     </div>
 
-                    {/* Voting Button - Pill-shaped, wider buttons */}
+                    {/* Voting Button - Blue Rounded Rectangle */}
                     <button
                       onClick={() => handleButtonClick(serialNo)}
-                      className={`
-                        flex-1 bg-blue-700 hover:bg-blue-800 active:bg-blue-900
-                        text-white font-bold rounded-full
-                        h-[36px] sm:h-[40px] md:h-[48px]
-                        text-xs sm:text-sm md:text-base
-                        shadow-md hover:shadow-lg
-                        transition-all duration-200
-                        transform hover:scale-[1.01] active:scale-[0.99]
-                        ${selectedCandidate === serialNo ? 'ring-1 sm:ring-2 ring-yellow-400 ring-offset-0.5 sm:ring-offset-1' : ''}
-                        ${serialNo === ourCandidateSerialNo ? 'ring-1 sm:ring-2 ring-yellow-400 moving-highlight' : ''}
-                        flex items-center justify-center
-                        px-4 sm:px-6 md:px-8
-                      `}
-                    >
-                      {/* Intentionally no number/text inside buttons as per design */}
-                    </button>
+                      className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-md w-[24px] h-[10px] sm:w-[32px] sm:h-[12px] md:w-[40px] md:h-[14px] transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] flex-shrink-0"
+                      style={{ minWidth: '24px', minHeight: '10px' }}
+                    />
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Highlight Message for Our Candidate */}
-            {candidateSerialNo && (
-              <div className="mt-2 sm:mt-3 md:mt-4 p-2 sm:p-3 md:p-4 bg-yellow-50 border border-yellow-400 sm:border-2 rounded-lg">
-                <div className="flex items-center justify-center gap-2 sm:gap-3">
-                  {/* Party Logo */}
-                  <div className="flex-shrink-0">
-                    <div className="relative w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10">
-                      <Image
-                        src="/download.png"
-                        alt="NCP Logo"
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 640px) 24px, (max-width: 768px) 32px, 40px"
-                      />
-                    </div>
-                  </div>
-                  {/* Message Text */}
-                  <p className={`text-center text-[10px] sm:text-xs md:text-sm font-black text-gray-900 ${language === '1' || language === '2' ? 'font-devanagari' : ''}`}>
-                    {language === '1' || language === '2' 
-                      ? `⚡ क्रमांक ${candidateSerialNo} (🕐 घड्याळ चिन्ह) यांना मतदान करा!`
-                      : `⚡ Vote for Serial No. ${candidateSerialNo} (🕐 Clock Symbol)!`
-                    }
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
